@@ -1,0 +1,167 @@
+=============================================================
+ PHASE-1a: ELİPSOİDAL DOME DOĞRULAMA RAPORU
+ Tarih: 2026-02-26 22:52
+=============================================================
+
+--- TEST SETİ 1: Temel Analitik Doğrulama (TEST-01) ---
+    R_eq = 73 mm, r0 = 22 mm, k = 0.6
+
+  [PASS] T1.1 θ_p doğrulama:  hata = 0.00e+00
+  [PASS] T1.2 h_dome çapraz formül: |trig - pisagor| = 0.00e+00 mm
+  [PASS] T1.2b h_dome profil çıktısı: hata = 0.00e+00 mm
+  [PASS] T1.3 Ekvator sınır koşulları:
+         ρ(0) - R_eq  = 0.00e+00 mm
+         x(0)         = 0.00e+00 mm
+         dρ/ds(0)     = 0.00e+00
+         dx/ds(0) - 1 = 0.00e+00
+  [PASS] T1.4 Polar açıklık sınır koşulları:
+         ρ(s_total) - r0     = 0.00e+00 mm
+         x(s_total) - h_dome = 0.00e+00 mm
+  [PASS] T1.5 Birim teğet vektör: max|norm-1| = 2.22e-16
+  [PASS] T1.6 Elips denklemi: max|(ρ/a)²+(x/b)²-1| = 4.44e-16
+  [PASS] T1.7 ρ monotonik azalan (ekvator→polar)
+  [PASS] T1.8 x_local monotonik artan (ekvator→polar)
+  [PASS] T1.9 Ekvator eğriliği: κ_m(0) = 3.805175e-02, beklenen = 3.805175e-02, bağıl hata = 0.00e+00
+  [PASS] T1.10 Yüzey alanı:
+          integral()  = 23484.4679 mm²
+          trapz(s,ρ)  = 23484.4653 mm²
+          Bağıl hata  = 1.10e-07
+
+--- TEST SETİ 2: C¹ Süreklilik Analizi (S-GEO-02) ---
+
+  Silindir tarafı (s → 0⁻):
+    ρ       = 73.000000 mm  (sabit = R_eq)
+    dρ/ds   = 0
+    dx/ds   = 1
+    κ_m     = 0
+
+  Dome tarafı (s → 0⁺, k = 0.60):
+    ρ(0)    = 73.000000 mm
+    dρ/ds(0)= -0.00e+00
+    dx/ds(0)= 1.0000000000
+    κ_m(0)  = 3.805175e-02 1/mm  [= 1/(R_eq·k²) = 1/(73.0·0.60²)]
+
+  [PASS] C⁰ süreklilik: |ρ_dome(0) - R_eq| = 0.00e+00 mm
+  [PASS] C¹ süreklilik: |dρ/ds(0)| = 0.00e+00, |dx/ds(0)-1| = 0.00e+00
+
+  [BİLGİ] C² süreksizliği (beklenen):
+    κ_m sıçraması = 1/(R_eq·k²) = 3.805175e-02 1/mm
+    Hemispherical referans (k=1): 1/R_eq = 1.369863e-02 1/mm
+    Oran: κ_eq(k=0.6) / κ_eq(k=1) = 2.78
+
+--- TEST SETİ 3: S-GEO-04 — k=1 Örtüşme Doğrulaması ---
+    ellipsoidal(k=1) vs hemispherical karşılaştırması
+
+  [PASS] Skaler büyüklükler:
+         |s_total farkı| = 0.00e+00 mm
+         |h_dome farkı|  = 0.00e+00 mm
+         |A_dome bağıl|  = 0.00e+00
+  [PASS] Vektörel büyüklükler (max hata):
+         |Δρ|        = 2.84e-11 mm
+         |Δx|        = 8.87e-12 mm
+         |Δ(dρ/ds)|  = 5.83e-14
+         |Δ(dx/ds)|  = 1.86e-13
+         |Δκ|/κ_ref  = 3.97e-16
+
+  ► S-GEO-04 DURUMU: ONAYLI ✓
+
+--- TEST SETİ 4: Eğrilik — Sayısal vs Analitik Doğrulama ---
+
+  ds = 3.5541e-02 mm
+  max|κ_sayısal - κ_analitik|     = 2.24e-08 1/mm
+  max|κ_sayısal - κ_analitik|/κ   = 5.88e-07
+  ortalama bağıl hata              = 2.14e-07
+  [PASS] Sayısal-analitik eğrilik uyumu
+
+--- TEST SETİ 5: Endüstri Test Senaryoları ---
+
+  [TEST-01 ASTM] R_eq=73.0, r0=22.0, k=0.60
+    r0/R_eq   = 0.3014
+    θ_p       = 1.2647 rad (72.46°)
+    s_total   = 71.0473 mm
+    h_dome    = 41.7636 mm
+    κ_m(ekv)  = 3.805175e-02 [beklenen: 3.805175e-02]
+    κ_m(pol)  = 8.991663e-03
+    Elips hata= 4.44e-16
+    [PASS] Tüm kontroller
+
+  [TEST-02 COPV] R_eq=152.4, r0=45.0, k=0.70
+    r0/R_eq   = 0.2953
+    θ_p       = 1.2711 rad (72.83°)
+    s_total   = 159.7323 mm
+    h_dome    = 101.9234 mm
+    κ_m(ekv)  = 1.339118e-02 [beklenen: 1.339118e-02]
+    κ_m(pol)  = 4.917492e-03
+    Elips hata= 4.44e-16
+    [PASS] Tüm kontroller
+
+  [TEST-03 Küçük Aç.] R_eq=150.0, r0=10.0, k=0.50
+    r0/R_eq   = 0.0667
+    θ_p       = 1.5041 rad (86.18°)
+    s_total   = 171.6565 mm
+    h_dome    = 74.8331 mm
+    κ_m(ekv)  = 2.666667e-02 [beklenen: 2.666667e-02]
+    κ_m(pol)  = 3.350070e-03
+    Elips hata= 4.44e-16
+    [PASS] Tüm kontroller
+
+  [TEST-04 H₂] R_eq=200.0, r0=50.0, k=0.70
+    r0/R_eq   = 0.2500
+    θ_p       = 1.3181 rad (75.52°)
+    s_total   = 218.8545 mm
+    h_dome    = 135.5544 mm
+    κ_m(ekv)  = 1.020408e-02 [beklenen: 1.020408e-02]
+    κ_m(pol)  = 3.674269e-03
+    Elips hata= 4.44e-16
+    [PASS] Tüm kontroller
+
+--- TEST SETİ 6: S-GEO-03 ve Uç Durumlar ---
+
+  [PASS] T6.1 Sığ dome k=0.3: h_dome=43.68 mm, κ_eq=7.2908e-02
+  [PASS] T6.2 Uzun dome k=2.0: h_dome=291.21 mm, κ_eq=1.6404e-03
+  [PASS] T6.3 Çok yassı k=0.15: h_dome=21.84 mm, κ_eq=2.9163e-01
+         >> kappa_eq x R_eq = 44.44 (hemisphericaldان ne kadar uzak)
+
+  Hata fırlatma testleri:
+  [PASS] T6.4a k<0 reddedildi
+  [PASS] T6.4b k=0 reddedildi
+  [PASS] T6.4c r0>R_eq reddedildi
+
+--- TEST SETİ 7: Sayısal vs Analitik Türev Karşılaştırması ---
+
+  ds = 7.9906e-02 mm
+  max|dρ/ds sayısal - analitik| = 1.57e-07
+  max|dx/ds sayısal - analitik| = 1.92e-07
+  [PASS] Sayısal-analitik türev uyumu
+
+--- Görselleştirme oluşturuluyor ---
+
+  Grafik kaydedildi: ellipsoidal_dome_verification.png
+
+--- TEST SETİ 8: Karşılaştırmalı Özet ---
+
+  Senaryo             R_eq      r0      k    θ_p [°]     s_total      h_dome   κ_eq [1/mm]  κ_pol [1/mm]
+  --------------------------------------------------------------------------------------------------------------
+  TEST-01 ASTM        73.0    22.0   0.60      72.46     71.0473     41.7636  3.805175e-02  8.991663e-03
+  TEST-02 COPV       152.4    45.0   0.70      72.83    159.7323    101.9234  1.339118e-02  4.917492e-03
+  TEST-03 Küçük Aç.   150.0    10.0   0.50      86.18    171.6565     74.8331  2.666667e-02  3.350070e-03
+  TEST-04 H₂         200.0    50.0   0.70      75.52    218.8545    135.5544  1.020408e-02  3.674269e-03
+
+  k değişimi etkisi (R_eq=152.4, r0=45.0):
+      k     s_total      h_dome      κ_m(ekv)      κ_m(pol)  κ_ekv/κ_pol
+  --------------------------------------------------------------------
+   0.30    122.0411     43.6814  7.290755e-02  2.228373e-03     32.7178
+   0.50    139.3929     72.8024  2.624672e-02  3.631114e-03      7.2283
+   0.60    149.2684     87.3629  1.822689e-02  4.291117e-03      4.2476
+   0.70    159.7323    101.9234  1.339118e-02  4.917492e-03      2.7232
+   0.80    170.6780    116.4838  1.025262e-02  5.506555e-03      1.8619
+   1.00    193.7084    145.6048  6.561680e-03  6.561680e-03      1.0000
+   1.20    217.8977    174.7258  4.556722e-03  7.441710e-03      0.6123
+   1.50    255.7291    218.4072  2.916302e-03  8.427874e-03      0.3460
+   2.00    321.5062    291.2096  1.640420e-03  9.261506e-03      0.1771
+
+=============================================================
+ SONUÇ: TÜM TESTLER GEÇTİ ✓
+ Elipsoidal dome meridyen profili GATE-1a için onaylı.
+ S-GEO-04 (k=1 örtüşme): ONAYLI
+=============================================================
