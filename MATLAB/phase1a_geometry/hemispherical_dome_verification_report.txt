@@ -1,0 +1,130 @@
+ PHASE-1a: HEMISPHERICAL DOME DOĞRULAMA RAPORU
+ Tarih: 2026-02-26 05:02
+=============================================================
+
+--- TEST SETİ 1: Temel Analitik Doğrulama ---
+    R_eq = 152.4 mm, r0 = 45.0 mm
+
+  [PASS] T1.1 θ_p doğrulama:  hata = 0.00e+00
+  [PASS] T1.2 s_total doğrulama: hata = 0.00e+00 mm
+  [PASS] T1.3 h_dome çapraz doğrulama: |trig - pisagor| = 0.00e+00 mm
+  [PASS] T1.3b h_dome profil çıktısı: hata = 0.00e+00 mm
+  [PASS] T1.4 Ekvator sınır koşulları:
+         ρ(0) - R_eq = 0.00e+00 mm
+         x(0)       = 0.00e+00 mm
+         dρ/ds(0)   = 0.00e+00
+         dx/ds(0)   = 0.00e+00
+  [PASS] T1.5 Polar açıklık sınır koşulları:
+         ρ(s_total) - r0     = 7.11e-15 mm
+         x(s_total) - h_dome = 0.00e+00 mm
+  [PASS] T1.6 Birim teğet vektör: max|norm-1| = 1.11e-16
+  [PASS] T1.7 Eğrilik sabitliği: max|κ - 1/R_eq| = 0.00e+00, bağıl = 0.00e+00
+  [PASS] T1.8 ρ monotonik azalan (ekvator→polar)
+  [PASS] T1.9 x_local monotonik artan (ekvator→polar)
+  [PASS] T1.10 Yüzey alanı doğrulama:
+          Analitik  = 139424.9669 mm²
+          Sayısal   = 139424.9481 mm²
+          Bağıl hata = 1.35e-07
+  [PASS] T1.11 Küre denklemi: max|ρ²+x²-R²| = 7.28e-12 mm²
+
+--- TEST SETİ 2: C¹ Süreklilik Analizi (S-GEO-02) ---
+
+  Silindir tarafı (s → 0⁻):
+    ρ       = 152.400000 mm  (sabit = R_eq)
+    dρ/ds   = 0          (sabit yarıçap)
+    dx/ds   = 1          (birim hız)
+    κ_m     = 0          (düz çizgi)
+
+  Dome tarafı (s → 0⁺):
+    ρ(0)    = 152.400000 mm
+    dρ/ds(0)= -0.00e+00
+    dx/ds(0)= 1.0000000000
+    κ_m(0)  = 6.561680e-03 1/mm
+
+  [PASS] C⁰ süreklilik: |ρ_dome(0) - ρ_cyl| = 0.00e+00 mm
+  [PASS] C¹ süreklilik: |dρ/ds_dome(0) - 0| = 0.00e+00
+  [PASS] C¹ süreklilik: |dx/ds_dome(0) - 1| = 0.00e+00
+
+  [BİLGİ] C² süreksizliği (beklenen):
+    κ_m sıçraması = |1/R_eq - 0| = 6.561680e-03 1/mm
+    Bu süreksizlik kabul edilir (Karar-10: C¹ yeterli).
+
+--- TEST SETİ 3: Endüstri Test Senaryoları ---
+    (Hemispherical dome tüm senaryolarda çalıştırılır)
+
+  [TEST-01 ASTM Subscale] R_eq=73.0, r0=22.0
+    r0/R_eq = 0.3014
+    θ_p     = 1.2647 rad (72.46°)
+    s_total = 92.3207 mm
+    h_dome  = 69.6060 mm
+    A_dome  = 31926.38 mm²
+    Küre denklem hatası = 1.82e-12 mm²
+    Eğrilik bağıl hata  = 0.00e+00
+    [PASS] Tüm kontroller
+
+  [TEST-02 Endüstriyel COPV] R_eq=152.4, r0=45.0
+    r0/R_eq = 0.2953
+    θ_p     = 1.2711 rad (72.83°)
+    s_total = 193.7084 mm
+    h_dome  = 145.6048 mm
+    A_dome  = 139424.97 mm²
+    Küre denklem hatası = 7.28e-12 mm²
+    Eğrilik bağıl hata  = 0.00e+00
+    [PASS] Tüm kontroller
+
+  [TEST-03 Küçük Açıklık] R_eq=150.0, r0=10.0
+    r0/R_eq = 0.0667
+    θ_p     = 1.5041 rad (86.18°)
+    s_total = 225.6120 mm
+    h_dome  = 149.6663 mm
+    A_dome  = 141057.16 mm²
+    Küre denklem hatası = 7.28e-12 mm²
+    Eğrilik bağıl hata  = 0.00e+00
+    [PASS] Tüm kontroller
+
+  [TEST-04 H₂ Aerospace] R_eq=200.0, r0=50.0
+    r0/R_eq = 0.2500
+    θ_p     = 1.3181 rad (75.52°)
+    s_total = 263.6232 mm
+    h_dome  = 193.6492 mm
+    A_dome  = 243346.72 mm²
+    Küre denklem hatası = 1.46e-11 mm²
+    Eğrilik bağıl hata  = 0.00e+00
+    [PASS] Tüm kontroller
+
+--- TEST SETİ 4: Uç Durumlar ---
+
+  [PASS] T4.1 Sığ dome (r0/R_eq=0.95): θ_p = 0.3176 rad (18.19°), h = 47.59 mm
+  [PASS] T4.2 Derin dome (r0=5mm): θ_p = 1.5380 rad (88.12°), h = 152.32 mm
+
+  Hata fırlatma testleri:
+  [PASS] T4.3a Negatif R_eq reddedildi
+  [PASS] T4.3b r0=0 reddedildi
+  [PASS] T4.3c r0=R_eq reddedildi
+  [PASS] T4.3d r0>R_eq reddedildi
+
+--- TEST SETİ 5: Sayısal vs Analitik Türev ---
+    (Merkezi fark yöntemi ile çapraz doğrulama)
+
+  ds = 9.6903e-02 mm
+  Beklenen merkezi fark hatası: O(ds²) ≈ 9.39e-03
+  max|dρ/ds_sayısal - dρ/ds_analitik| = 6.44e-08
+  max|dx/ds_sayısal - dx/ds_analitik| = 6.74e-08
+  [PASS] Sayısal-analitik türev uyumu
+
+--- Görselleştirme oluşturuluyor ---
+
+  Grafik kaydedildi: hemispherical_dome_verification.png
+
+--- TEST SETİ 6: Karşılaştırmalı Özet Tablosu ---
+
+  Senaryo                   R_eq        r0   r0/R_eq     θ_p [°]     s_total        h_dome
+  ----------------------------------------------------------------------------------
+  TEST-01 ASTM Subscale      73.0      22.0    0.3014       72.46     92.3207       69.6060
+  TEST-02 Endüstriyel COPV     152.4      45.0    0.2953       72.83    193.7084      145.6048
+  TEST-03 Küçük Açıklık     150.0      10.0    0.0667       86.18    225.6120      149.6663
+  TEST-04 H₂ Aerospace     200.0      50.0    0.2500       75.52    263.6232      193.6492
+
+=============================================================
+ SONUÇ: TÜM TESTLER GEÇTİ ✓
+ Hemispherical dome meridyen profili GATE-1a için onaylı.
