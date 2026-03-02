@@ -1,0 +1,225 @@
+=============================================================
+ PHASE-1a: İZOTENSOİD DOME DOĞRULAMA RAPORU (v2)
+ Tarih: 2026-02-28 02:49
+=============================================================
+
+--- TEST SETİ 1: Temel Analitik Doğrulama (TEST-01) ---
+    R_eq = 73 mm, r0 = 22 mm
+
+  [PASS] T1.1 q, m doğrulama:  |Δq| = 0.00e+00, |Δm| = 0.00e+00
+         Y_eq = 3.318182, q = 10.010331, m = 0.476214
+  [PASS] T1.2 h_dome:  profil = 128.630198 mm, analitik = 128.630198 mm, |Δ| = 0.00e+00 mm
+  [PASS] T1.3 Ekvator sınır koşulları:
+         ρ(0) - R_eq  = 0.00e+00 mm
+         x(0)         = 2.84e-14 mm
+         dρ/ds(0)     = 0.00e+00
+         dx/ds(0) - 1 = 0.00e+00
+  [PASS] T1.4 Polar açıklık sınır koşulları:
+         ρ(s_total) - r0     = 0.00e+00 mm
+         x(s_total) - h_dome = 0.00e+00 mm
+  [PASS] T1.5 Birim teğet vektör: max|norm-1| = 3.33e-16 (iç noktalar)
+  [PASS] T1.6 ρ monotonik azalan (ekvator→polar)
+  [PASS] T1.7 x_local monotonik artan (ekvator→polar)
+  [PASS] T1.8 Ekvator eğriliği: κ_m(0) = 1.506708e-02, beklenen = 1.506708e-02, bağıl hata = 0.00e+00
+  [PASS] T1.9 Yüzey alanı:
+          integral()  = 42750.6620 mm²
+          trapz(s,ρ)  = 42750.6620 mm²
+          Bağıl hata  = 3.24e-10
+  [PASS] T1.10 Clairaut doğrulama: max|sin(α) - r0/ρ| = 2.22e-16
+
+--- TEST SETİ 2: C¹ Süreklilik Analizi (S-GEO-02) ---
+
+  Silindir tarafı (s → 0⁻):
+    ρ       = 73.000000 mm  (sabit = R_eq)
+    dρ/ds   = 0
+    dx/ds   = 1
+    κ_m     = 0
+
+  İzotensoid dome tarafı (s → 0⁺):
+    ρ(0)    = 73.000000 mm
+    dρ/ds(0)= 0.00e+00
+    dx/ds(0)= 1.0000000000
+    κ_m(0)  = 1.506708e-02 1/mm
+
+  [PASS] C⁰ süreklilik: |ρ_dome(0) - R_eq| = 0.00e+00 mm
+  [PASS] C¹ süreklilik: |dρ/ds(0)| = 0.00e+00, |dx/ds(0)-1| = 0.00e+00
+
+  [BİLGİ] C² süreksizliği (beklenen):
+    κ_m sıçraması = 1.506708e-02 1/mm (silindir κ=0 → dome κ=1.5067e-02)
+    Hemispherical referans (aynı R_eq): 1/R_eq = 1.369863e-02 1/mm
+    Oran: κ_eq(isotensoid) / κ_eq(hemispherical) = 1.0999
+
+--- TEST SETİ 3: Eliptik İntegral vs ODE Çapraz Doğrulama ---
+    KRİTİK TEST — GATE-1a-01 gereksinimi
+    v2: DOĞRU ODE — dZ/dY = Y(1+2q-Y²)/√[(2+2q-Y²)(Y²-1)(q+1-Y²)]
+
+  Eliptik integral çözümü (birincil):
+    s_total = 293.30679323 mm
+    h_dome  = 269.45140353 mm
+    A_dome  = 186473.9297 mm²
+
+  ODE çözümü (ikincil, ode45):
+    Y aralığı: [1.0000000100, 3.3866666567]
+    Z(Y_end)  = 5.98756031 (boyutsuz)
+    N_adım    = 2145
+    h_dome(ODE) = 269.45140349 mm (singülarite düzeltmeli)
+
+  Skaler karşılaştırma:
+  [PASS] h_dome: |Δ| = 3.96e-08 mm, bağıl = 1.47e-10
+  Vektörel karşılaştırma (güvenli iç noktalar, N=1033):
+  [PASS] max|Δx_local| = 8.81e-08 mm
+         ort|Δx_local| = 4.37e-09 mm
+
+  ► GATE-1a-01 DURUMU: ONAYLI ✓
+
+--- TEST SETİ 4: Eğrilik — Sayısal (dβ/ds) vs Profil Doğrulama ---
+
+  ds = 7.3345e-02 mm, analiz aralığı: s/s_total ∈ [0.02, 0.90]
+  max|κ_sayısal - κ_profil|   = 3.32e-09 1/mm
+  max bağıl hata              = 6.85e-05
+  ortalama bağıl hata         = 6.45e-07
+  [PASS] Sayısal-analitik eğrilik uyumu
+
+  [BİLGİ] κ_m işaret değişimi (bükülme noktası):
+    Profil fonksiyonu: true
+    Sayısal (dβ/ds):  true
+    κ_eq = 7.188422e-03 (pozitif — konveks)
+    κ_pol = -1.164175e-02 (negatif — konkav)
+
+--- TEST SETİ 5: Endüstri Test Senaryoları ---
+
+  [TEST-01 ASTM] R_eq=73.0, r0=22.0
+    r0/R_eq     = 0.3014
+    q           = 10.0103
+    m           = 0.476214
+    s_total     = 139.9096 mm
+    h_dome      = 128.6302 mm
+    aspect_r    = 1.7621 (h/R_eq)
+    κ_m(ekv)    = 1.506708e-02 [beklenen: 1.506708e-02]
+    Clairaut    = 2.22e-16 (max hata)
+    [PASS] Tüm kontroller
+
+  [TEST-02 COPV] R_eq=152.4, r0=45.0
+    r0/R_eq     = 0.2953
+    q           = 10.4695
+    m           = 0.477210
+    s_total     = 293.3068 mm
+    h_dome      = 269.4514 mm
+    aspect_r    = 1.7681 (h/R_eq)
+    κ_m(ekv)    = 7.188422e-03 [beklenen: 7.188422e-03]
+    Clairaut    = 1.11e-16 (max hata)
+    [PASS] Tüm kontroller
+
+  [TEST-03 Küçük Aç.] R_eq=150.0, r0=10.0
+    r0/R_eq     = 0.0667
+    q           = 224.0000
+    m           = 0.498886
+    s_total     = 322.0304 mm
+    h_dome      = 285.4405 mm
+    aspect_r    = 1.9029 (h/R_eq)
+    κ_m(ekv)    = 6.696429e-03 [beklenen: 6.696429e-03]
+    Clairaut    = 1.11e-16 (max hata)
+    [PASS] Tüm kontroller
+
+  [TEST-04 H₂] R_eq=200.0, r0=50.0
+    r0/R_eq     = 0.2500
+    q           = 15.0000
+    m           = 0.483871
+    s_total     = 396.1208 mm
+    h_dome      = 361.7220 mm
+    aspect_r    = 1.8086 (h/R_eq)
+    κ_m(ekv)    = 5.333333e-03 [beklenen: 5.333333e-03]
+    Clairaut    = 1.11e-16 (max hata)
+    [PASS] Tüm kontroller
+
+--- TEST SETİ 6: S-GEO-01, S-GEO-03 ve Uç Durumlar ---
+
+  T6.1: Küçük polar açıklık (R_eq/r0 = 15, S-GEO-01 stiff ODE)
+    q = 224.00, aspect_r = 1.9029
+    Polar ρ hatası = 0.00e+00 mm
+    [PASS] S-GEO-01 (stiff ODE) profil oluşturuldu
+
+  T6.2: Büyük polar açıklık (R_eq/r0 = 1.5)
+    q = 1.2500, aspect_r = 1.1471
+    Polar ρ hatası = 0.00e+00 mm
+    [PASS] Sığ dome profil oluşturuldu
+
+  T6.3: Aspect ratio (h_dome/R_eq) vs q tablosu
+         DOĞRU asimptotik limit: √2·E(1/2) ≈ 1.9101
+         (Koussios Fig.4.3 → N_hoop/N_polar oranı, aspect ratio DEĞİL)
+
+     R_eq/r0         q    h/R_eq      h_dome     s_total
+    ------------------------------------------------------
+      1.2      0.44    0.6653      66.5308      69.0416
+      1.5      1.25    1.1471     114.7084     120.3951
+      2.0      3.00    1.4934     149.3439     158.9572
+      3.0      8.00    1.7285     172.8492     187.2654
+      4.0     15.00    1.8086     180.8610     198.0604
+      5.0     24.00    1.8453     184.5339     203.5407
+      7.0     48.00    1.8771     187.7143     208.9237
+     10.0     99.00    1.8940     189.3972     212.3612
+     15.0    224.00    1.9029     190.2937     214.6869
+Warning: Y_eq = R_eq/r0 = 20.0 > 15. Çok küçük polar açıklık — ODE stiff olabilir (S-GEO-01). 
+> In isotensoid_dome_profile (line 68)
+In verify_isotensoid_dome (line 500) 
+     20.0    399.00    1.9061     190.6071     215.7372
+
+    Asimptotik limit (teorik): √2·E(1/2) = 1.9101
+    h/R_eq(q=399):                         1.9061
+    Bağıl fark:                             2.1086e-03
+    [PASS] Asimptotik davranış doğru (h/R_eq → 1.9101)
+
+  T6.4: Hata fırlatma testleri:
+    [PASS] T6.4a r0=0 reddedildi
+    [PASS] T6.4b r0<0 reddedildi
+    [PASS] T6.4c r0>R_eq reddedildi
+    [PASS] T6.4d r0=R_eq reddedildi
+    [PASS] T6.4e R_eq<0 reddedildi
+
+--- TEST SETİ 7: Sayısal vs Analitik Türev Karşılaştırması ---
+
+  ds = 1.4673e-01 mm, analiz aralığı: s/s_total ∈ [0.01, 0.90]
+  max|dρ/ds sayısal - analitik| = 7.22e-07
+  max|dx/ds sayısal - analitik| = 1.88e-07
+  [PASS] Sayısal-analitik türev uyumu
+
+--- Görselleştirme oluşturuluyor ---
+
+  Grafik kaydedildi: isotensoid_dome_verification.png
+
+--- TEST SETİ 8: Karşılaştırmalı Özet ---
+
+  TABLO 1: Dome tipleri karşılaştırması (R_eq=152.4, r0=45.0)
+  Dome Tipi            s_total      h_dome      h/R_eq   κ_eq [1/mm]    α_eq [°]
+  ------------------------------------------------------------------------------
+  Hemispherical       193.7084    145.6048      0.9554  6.561680e-03       17.17
+  Elipsoidal k=0.7    159.7323    101.9234      0.6688  1.339118e-02       17.17
+  İzotensoid          293.3068    269.4514      1.7681  7.188422e-03       17.17
+
+  Fiziksel farklar:
+    - Hemispherical: κ_eq = 1/R_eq (sabit eğrilik)
+    - Elipsoidal:    κ_eq = 1/(R_eq·k²) (k ile ayarlanabilir)
+    - İzotensoid:    κ_eq fizik tarafından belirlenir (netting theory)
+    - İzotensoid h/R_eq = 1.7681 (değiştirilemez — optimal dome)
+    - İzotensoid dome'da κ_m İŞARET DEĞİŞTİRİR (bükülme noktası)
+
+  TABLO 2: q değişimi etkisi (İzotensoid, R_eq=152.4)
+      r0      Y_eq         q     s_total      h/R_eq   κ_eq [1/mm]
+  --------------------------------------------------------------
+   100.0      1.52      1.32    187.7070      1.1726  1.152297e-02
+    80.0      1.91      2.63    234.5233      1.4491  9.057540e-03
+    60.0      2.54      5.45    271.4061      1.6552  7.765304e-03
+    45.0      3.39     10.47    293.3068      1.7681  7.188422e-03
+    30.0      5.08     24.81    310.6851      1.8474  6.826195e-03
+    20.0      7.62     57.06    319.8971      1.8823  6.676667e-03
+
+=============================================================
+ SONUÇ ÖZETİ
+=============================================================
+  Toplam PASS: 28
+  Toplam FAIL: 0
+
+  ► TÜM TESTLER GEÇTİ ✓
+  ► GATE-1a-01 ONAYLI ✓
+=============================================================
+>> 
