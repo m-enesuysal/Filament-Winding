@@ -4,6 +4,7 @@
 **Faz:** Phase-0 (Mimari Kararlar)  
 **Durum:** TAMAMLANDI  
 **Tarih:** 2026-02-25  
+**Son Güncelleme:** 2026-03-02 (GATE-1a-01 sonuçları eklendi)  
 **Repo:** https://github.com/m-enesuysal/Filament-Winding
 
 ---
@@ -330,48 +331,34 @@ Eşik aşılırsa interpolasyon yöntemi reddedilir.
 | Parametre | Birim | Açıklama |
 |-----------|-------|----------|
 | BW | mm | Tek tow bant genişliği |
-| BT | mm | Tek katman bant kalınlığı (reçine dahil) |
-| N_tow | adet | Aynı anda sarılan tow sayısı (kullanıcı tarafından ayarlanabilir) |
+| BT | mm | Tek katman bant kalınlığı |
+| N_tow | — | Aynı anda sarılan tow sayısı (ayarlanabilir) |
 | Fiber_tension | N | Fiber gerginlik kuvveti |
-| Winding_type | — | Wet / Dry proses tipi seçimi |
+| Winding_type | — | Wet / Dry |
 
 **Türetilen büyüklükler:**
 - Efektif bant genişliği: BW_eff = N_tow × BW
 - Efektif polar açıklık yarıçapı: RE = r₀ + BW_eff / 2
 
-**Endüstri referans değerleri (test senaryoları için):**
-- BW = %2–4 × çap (örnek: 300 mm çap için 8–12 mm)
-- BT = 0.25 mm (tek katman, reçine dahil, tipik değer)
-- Helical sarım açısı: 12°–30°
-- Hoop sarım açısı: 88°–89.1°
-- Sürtünme katsayısı: ıslak sarım μ = 0.10, prepreg μ = 0.20
-
-**Not:** BT kapsam dışıydı (Karar-12 orijinal), Karar-21 ile kapsam içine alındı.
-Gerekçe: çoklu sekans desteklendiğinde R_eff = R_eq + n × BT güncellenmesi gerekir.
-
 ---
 
-### KARAR-13: Winding Pattern — p/q Notasyonu
+### KARAR-13: Winding Pattern Tanımı — p/q Notasyonu
 
 **Durum:** Onaylandı  
-**Seçim:** Hibrit yaklaşım (angle-driven + pattern-driven)
+**Seçim:** Hibrit yaklaşım (Opsiyon C)
 
-Yazılım her iki yönde çalışacak:
-- Kullanıcı α girerse → uyumlu p/q pattern önerilir
-- Kullanıcı p/q girerse → α hesaplanır
-- Uyumsuzluk durumunda → uyarı + L_cyl düzeltme önerisi
+Her iki yön desteklenir:
+- Pattern-driven: Kullanıcı p/q girer, yazılım uyumlu α hesaplar
+- Angle-driven: Kullanıcı α girer, yazılım en yakın p/q önerir
+
+L_cyl ince ayar parametresi olarak kullanılabilir — tam pattern kapama için
+milimetrik düzeltme.
 
 **Temel tanımlar:**
 - Circuit (devre): Bir tam dome-to-dome-to-dome hareketi
-- Pattern: p adet devrenin mandrel yüzeyini tam kaplaması
+- Pattern (desen): p adet devrenin mandrel yüzeyini tam kaplaması
 - Angular step: Δφ = 2πq/p
-- Pattern uyumu koşulu: Δφ_circuit = 2πq/p
-
-**Faz yapısı güncellemesi:**
-- **Phase-2a:** Geodesic path matematiği — Clairaut relation, tek devre sarım yolu üretimi,
-  dome geçiş hesabı. MATLAB verification gate zorunlu.
-- **Phase-2b:** Pattern generation — p/q hesabı, açısal ilerleme, tam kaplama doğrulaması,
-  L_cyl ince ayarı. Phase-2a MATLAB gate'i geçilmeden Phase-2b'ye başlanamaz.
+- gcd(p,q) = 1 koşulu zorunlu (S-PAT-02)
 
 ---
 
@@ -415,11 +402,11 @@ otomatik küçültecek.
 
 **S-GEO-02: Ekvator noktası (ρ = R_eq)**
 Silindir-dome geçiş noktası. Meridyen eğim açısı β = 0. C¹ süreklilik sağlanmalı.
-İkinci türevde süreksizlik olabilir.
+İkinci türevde süreksizlik olabilir (C² süreksizliği).
 
 **S-GEO-03: Elipsoidal dome k → 0 limiti**
 k çok küçük olduğunda dome düz disk haline gelir — meridyen profili dejenere olur.
-Pratik alt sınır tanımlanmalı.
+Pratik alt sınır: k_min = 0.15 (altında hata fırlatılır).
 
 **S-GEO-04: Hemispherical dome k = 1 özel durumu**
 Elipsoidal k → 1 limitinde EllipsoidalProfile ve HemisphericalProfile sınıfları aynı
@@ -455,70 +442,63 @@ L_cyl ince ayarı ile çözülecek.
 
 **S-PAT-02: p/q indirgenemez kesir kontrolü**
 gcd(p,q) = 1 koşulu zorunlu. gcd(p,q) > 1 olduğunda fiber p/gcd adet devrede
-tam kapatmayı tamamlar ve kalan devreler üst üste biner.
-Phase-2b'de pattern validation adımının ilk koşulu.
+tam kapatmayı tamamlar ve kalan devreler üst üste biner — kaplama eksik kalır.
+Bu kontrol Phase-2b'de pattern validation adımının ilk koşulu olarak uygulanacak.
 
-#### Kapsam Dışı (Makine Kontrolcüsü Sorumluluğunda)
-
-Aşağıdaki senaryolar bu yazılımın kapsamı dışındadır:
+**Kapsam dışı (makine kontrolcüsü sorumluluğunda):**
 - Eksen stroke limitleri (X, Y, C, A)
 - Acil durdurma senaryoları
 - Malzeme kopma durumu
 
 ---
 
-### KARAR-16: MATLAB ↔ C++ Doğrulama İş Akışı
+### KARAR-16: MATLAB ↔ C++ Doğrulama İş Akışı — Gate Protokolü
 
 **Durum:** Onaylandı
 
-**4 Adımlı Gate Protokolü:**
+**Adım 1 — MATLAB referans implementasyonu:**
+Matematiksel model önce MATLAB'da implement edilir. Bu implementasyon referans çözüm
+(ground truth) statüsündedir. MATLAB kodu repo'da `MATLAB/phaseXX/` altında
+versiyon kontrollü tutulur.
 
-1. **MATLAB referans implementasyonu:** Matematiksel model önce MATLAB'da implement
-   edilir. MATLAB kodu `MATLAB/phaseXX/` altında versiyon kontrollü tutulur.
-2. **MATLAB iç doğrulaması:** Analitik çözümü bilinen test senaryolarıyla karşılaştırma,
-   singülaritelerde davranış kontrolü, literatür örnekleriyle karşılaştırma.
-3. **C++ implementasyonu:** Doğrulanmış MATLAB modeli C++'a aktarılır.
-4. **Cross-validation:** C++ ve MATLAB çıktıları aynı test senaryolarında karşılaştırılır.
-   Karar-11 toleransları kullanılır. Sonuçlar `docs/` altında belgelenir.
+**Adım 2 — MATLAB iç doğrulaması:**
+Analitik çözümü bilinen test senaryolarıyla karşılaştırma, bilinen singülaritelerde
+davranış kontrolü, literatürdeki sayısal örneklerle karşılaştırma. Bu adım geçilmeden
+C++ implementasyonuna başlanamaz.
 
-**Standart Test Senaryoları:**
+**Adım 3 — C++ implementasyonu:**
+Doğrulanmış MATLAB modeli C++'a aktarılır.
 
-| Test ID | Açıklama | R_eq [mm] | r₀ [mm] | Dome Tipi | Ek |
-|---------|---------|-----------|---------|-----------|-----|
-| TEST-01 | ASTM D 2585 Subscale | 73 | 22 | Elipsoidal | k = 0.6 |
-| TEST-02 | Endüstriyel COPV Large | 152.4 | 45 | Isotensoid | Netting theory |
-| TEST-03 | Stiff ODE / Küçük Açıklık | 150 | 10 | Isotensoid | r₀/R_eq = 0.067 |
-| TEST-04 | Yüksek Basınçlı H₂ | 200 | 50 | Elipsoidal | k = 0.7, Aerospace |
+**Adım 4 — Cross-validation:**
+C++ çıktısı ile MATLAB çıktısı aynı test senaryolarında karşılaştırılır.
+Karar-11 toleransları uygulanır. Sonuçlar `docs/` altında belgelenir.
 
-**Doğrulama çıktı formatı (her gate raporu):**
-- Test senaryosu tanımı (girdi parametreleri)
-- MATLAB sonuçları (sayısal değerler + grafik)
-- C++ sonuçları (aynı format)
-- Hata metrikleri (maksimum mutlak, RMS, bağıl)
-- Pass/Fail kararı (Karar-11 toleranslarına göre)
+**Standart test senaryoları:**
+
+| ID | Açıklama | R_eq [mm] | r₀ [mm] |
+|----|---------|-----------|---------|
+| TEST-01 | ASTM Subscale | 73 | 22 |
+| TEST-02 | Endüstriyel COPV | 152.4 | 45 |
+| TEST-03 | Küçük Açıklık | 150 | 10 |
+| TEST-04 | H₂ Aerospace | 200 | 50 |
 
 ---
 
 ### KARAR-17: Hata Yönetimi Stratejisi
 
 **Durum:** Onaylandı  
-**Seçim:** Katmanlı hibrit yaklaşım
+**Seçim:** Katmanlı hibrit (Opsiyon C)
 
-**Üst katman** (kullanıcı girdisi, dosya I/O, konfigürasyon, mandrel oluşturma):
-- Exception-based
-- std::out_of_range, std::invalid_argument ve özel domain exception sınıfları
+- **Üst katman** (kullanıcı girdisi, dosya I/O, konfigürasyon, mandrel oluşturma):
+  Exception-based. std::out_of_range, std::invalid_argument ve özel domain exception
+  sınıfları kullanılacak.
+- **Alt katman** (numerik hesap çekirdeği, interpolasyon sorguları, ODE adımları,
+  kinematik tight loops): Return-code based. C++17 std::optional veya std::expected
+  kullanılacak. Bu katmanda hiçbir exception fırlatılmayacak.
 
-**Alt katman** (numerik hesap çekirdeği, interpolasyon sorguları, ODE adımları,
-kinematik tight loops):
-- Return-code based
-- C++17 std::optional veya std::expected
-- Bu katmanda hiçbir exception fırlatılmayacak
-
-**Katman sınırı:**
-- MandrelGeometry ve IMeridianProfile public API'si → üst katman
-- MeridianLookupTable sorgu metodları ve ODE integrasyon adımları → alt katman
-
-Her metodun hangi katmana ait olduğu header dosyalarında açıkça belgelenecek.
+**Katman sınırı tanımı:** MandrelGeometry ve IMeridianProfile public API'si üst katman.
+MeridianLookupTable sorgu metodları ve ODE integrasyon adımları alt katman. Her metodun
+hangi katmana ait olduğu header dosyalarında açıkça belgelenecek.
 
 ---
 
@@ -655,20 +635,52 @@ onlarla sınırlı).
 
 ### GATE-1a: Phase-1a Geometri Doğrulama Kapısı
 
+**Durum:** ✅ ONAYLI (2026-03-02)
+
 Phase-1a'dan Phase-1b'ye geçiş için tüm koşulların sağlanması zorunludur.
 
-| # | Koşul | Kriter |
-|---|-------|--------|
-| 1 | İnterpolasyon yöntemi seçimi | Spline vs Chebyshev — analitik türev referansıyla hata analizi |
-| 2 | Adaptif örnekleme kriteri | Eğrilik tabanlı yoğunlaştırma kuralı belirlenmesi |
-| 3 | Tablo çözünürlüğü vs hata | Trade-off analizi, Karar-11 toleransları referans |
-| 4 | C¹ süreklilik doğrulaması | Her dome tipi için ekvator noktasında teğet sürekliliği |
-| 5 | k=1 örtüşme doğrulaması | EllipsoidalProfile(k=1) = HemisphericalProfile (S-GEO-04) |
+| # | Koşul | Kriter | Sonuç |
+|---|-------|--------|-------|
+| 1 | İnterpolasyon yöntemi seçimi | Spline vs Chebyshev — analitik türev referansıyla hata analizi | ✅ |
+| 2 | Adaptif örnekleme kriteri | Eğrilik tabanlı yoğunlaştırma kuralı belirlenmesi | ✅ |
+| 3 | Tablo çözünürlüğü vs hata | Trade-off analizi, Karar-11 toleransları referans | ✅ |
+| 4 | C¹ süreklilik doğrulaması | Her dome tipi için ekvator noktasında teğet sürekliliği | ✅ |
+| 5 | k=1 örtüşme doğrulaması | EllipsoidalProfile(k=1) = HemisphericalProfile (S-GEO-04) | ✅ |
 
-Tolerans kriterleri: Karar-11 Katman 2 değerleri uygulanır.
+**GATE-1a-01 Sonuçları:**
+
+Hemispherical, elipsoidal ve isotensoid dome profilleri MATLAB'da doğrulanmıştır.
+Toplam **28/28 test PASS** — tüm profil tipleri, tüm test senaryoları (TEST-01 ila
+TEST-04), C¹ süreklilik, S-GEO-04 k=1 örtüşme, eğrilik çapraz doğrulama ve uç
+durum senaryoları dahil.
+
+**Silindirik bölge kararı:** Silindirik bölge için ayrı MATLAB doğrulama scripti
+gereksizdir. ρ = R_eq = sabit, κ_m = 0, β = 0 olan trivial geometri, Phase-1b'de
+MandrelGeometry sınıfı içinde analitik olarak tanımlanacaktır. Ayrı bir profil
+fonksiyonu veya lookup table gerekmez.
+
+**Struct arayüz yaması:** GATE-1a doğrulama sürecinde profil struct çıktı
+arayüzünde eksik alanlar tespit edilmiş ve tüm profil fonksiyonlarına
+(hemispherical_dome_profile, ellipsoidal_dome_profile, isotensoid_dome_profile)
+aşağıdaki alanlar eklenmiştir:
+
+| Alan | Açıklama |
+|------|----------|
+| `kappa_eq` | Ekvator meridyen eğriliği κ_m(s=0) [1/mm] |
+| `kappa_pol` | Polar açıklık meridyen eğriliği κ_m(s=s_total) [1/mm] |
+| `alpha_w` | Ekvator winding açısı α_w = arcsin(r₀/R_eq) [rad] |
+| `aspect_r` | Dome aspect ratio (hemispherical: 1.0, elipsoidal: k, isotensoid: h_dome/R_eq) |
+
+Bu alanlar Phase-1b C++ arayüzüne ve Phase-2 geodesic solver girdilerine
+doğrudan karşılık gelmektedir. Tüm profil fonksiyonları artık ortak bir üst
+küme struct arayüzü üzerinden tutarlı çıktı üretmektedir.
+
+Tolerans kriterleri: Karar-11 Katman 2 değerleri uygulanmıştır.
 Test senaryoları: Karar-16 TEST-01 ila TEST-04.
 
 ### GATE-1b-01: C++ ODE Altyapısı Doğrulama Kapısı
+
+**Durum:** Bekliyor
 
 | # | Koşul | Kriter |
 |---|-------|--------|
@@ -680,10 +692,12 @@ Test senaryoları: Karar-16 TEST-01 ila TEST-04.
 
 ### GATE-2a: Phase-2a Geodesic Path Doğrulama Kapısı
 
+**Durum:** Bekliyor  
 Phase-2a'da tanımlanacak. Yapı: GATE-1a ile aynı protokol.
 
 ### GATE-2b: Phase-2b Pattern Doğrulama Kapısı
 
+**Durum:** Bekliyor  
 Phase-2b'da tanımlanacak. İlk koşul: gcd(p,q) = 1 kontrolü (S-PAT-02).
 
 ---
@@ -697,89 +711,41 @@ Phase-2b'da tanımlanacak. İlk koşul: gcd(p,q) = 1 kontrolü (S-PAT-02).
 
 ---
 
-## 5. Güncellenmiş Faz Yapısı
+## 5. Phase-1a Sonuçları Özeti
 
-| Faz | Kapsam | GATE |
-|-----|--------|------|
-| Phase-0 | Sistem mimarisi tanımı ve formal planlama | — (bu doküman) |
-| Phase-1a | Mandrel geometri tanımı (parametrik meridyen profil — MATLAB) | GATE-1a |
-| Phase-1b | Geometri kernel (C++ implementasyonu) | GATE-1b-01 |
-| Phase-2a | Geodesic path matematiği (Clairaut, tek devre, dome geçişi) | GATE-2a |
-| Phase-2b | Pattern generation (p/q, kaplama, L_cyl ayarı) | GATE-2b |
-| Phase-3 | Kinematik çözücü (4-eksen ters kinematik) | — |
-| Phase-4 | Trajektori planlama (hız, ivme, jerk kısıtları) | — |
-| Phase-5 | Post-Processor (G-code üretimi) | — |
-| Phase-6 | Simülasyon ve doğrulama çerçevesi | — |
+### Doğrulanan Dome Profilleri
 
----
+| Dome Tipi | Matematik | MATLAB | Doğrulama | Durum |
+|-----------|-----------|--------|-----------|-------|
+| Hemispherical | ✅ | ✅ | ✅ 28/28 PASS | Tamamlandı |
+| Elipsoidal | ✅ | ✅ | ✅ 28/28 PASS | Tamamlandı |
+| Isotensoid | ✅ | ✅ | ✅ 28/28 PASS | Tamamlandı |
+| Silindirik bölge | — | — | Gereksiz | Phase-1b'de analitik |
 
-## 6. Bağımlılık Zinciri
+### MATLAB Dosyaları (MATLAB/phase1a_geometry/)
 
-```
-Phase-0 (bu doküman)
-  │
-  ├── Phase-1a (MATLAB geometri)
-  │     │
-  │     └── GATE-1a ──► Phase-1b (C++ geometri kernel)
-  │                       │
-  │                       └── GATE-1b-01 ──► Phase-2a
-  │
-  ├── Phase-2a (MATLAB geodesic path)
-  │     │
-  │     └── GATE-2a ──► Phase-2b (pattern generation)
-  │                       │
-  │                       └── GATE-2b ──► Phase-3
-  │
-  ├── Phase-3 (kinematik çözücü)
-  │     │
-  │     └── Phase-4 (trajektori planlama)
-  │           │
-  │           └── Phase-5 (G-code post-processor)
-  │
-  └── Phase-6 (simülasyon ve doğrulama)
-```
+| Dosya | İşlev |
+|-------|-------|
+| `hemispherical_dome_profile.m` | Hemispherical dome meridyen profili üretici |
+| `ellipsoidal_dome_profile.m` | Elipsoidal dome meridyen profili üretici |
+| `isotensoid_dome_profile.m` | Isotensoid dome meridyen profili üretici (ODE tabanlı) |
+| `verify_hemispherical_dome.m` | Hemispherical doğrulama scripti |
+| `verify_ellipsoidal_dome.m` | Elipsoidal doğrulama scripti (S-GEO-04 dahil) |
+| `verify_isotensoid_dome.m` | Isotensoid doğrulama scripti |
+
+### Kritik Mühendislik Notları (Phase-1a'dan)
+
+- Ekvator eğrilik sıçraması dome tipine bağlıdır: hemispherical κ_m(0) = 1/R_eq,
+  elipsoidal κ_m(0) = 1/(R_eq·k²), isotensoid κ_m(0) ODE çözümünden.
+  Yassı dome'larda (k < 1) sıçrama daha büyüktür.
+- S-GEO-04 doğrulanmıştır: ellipsoidal(k=1) ve hemispherical profilleri
+  Karar-11 toleransları içinde birebir örtüşmektedir.
+- Tüm profil fonksiyonları ortak struct arayüzü üzerinden tutarlı çıktı üretmektedir
+  (kappa_eq, kappa_pol, alpha_w, aspect_r alanları dahil).
 
 ---
 
-## 7. Zorunlu Girdi Parametreleri Özeti
-
-### Phase-1a/1b Girdileri (Mandrel Geometrisi)
-
-| Parametre | Birim | Doğrulama |
-|-----------|-------|-----------|
-| R_eq | mm | > 0 |
-| r₀ | mm | 0 < r₀ < R_eq |
-| L_cyl | mm | ≥ 0 |
-| dome_type | — | {isotensoid, ellipsoidal, hemispherical} |
-| k | — | > 0 (sadece elipsoidal) |
-
-### Phase-2 Girdileri (Fiber/Tow ve Sarım)
-
-| Parametre | Birim | Doğrulama |
-|-----------|-------|-----------|
-| BW | mm | > 0 |
-| BT | mm | > 0 |
-| N_tow | adet | ≥ 1, tamsayı |
-| Fiber_tension | N | > 0 |
-| Winding_type | — | {wet, dry} |
-| α veya p/q | ° veya [-] | Karar-7 aralıkları, gcd(p,q)=1 |
-| winding_sequence | liste | Her eleman: {winding_type, α/pq, N_layers} |
-
-Türetilen: BW_eff = N_tow × BW, RE = r₀ + BW_eff/2, R_eff = R_eq + n × BT
-
-### Phase-3 Girdileri (Feed Eye)
-
-| Parametre | Birim | Doğrulama |
-|-----------|-------|-----------|
-| D_eye | mm | > 0 |
-| W_eye | mm | > 0 |
-| H_eye | mm | > 0 |
-| L_arm | mm | > 0 |
-| d_min | mm | > 0 |
-
----
-
-## 8. Referanslar
+## 6. Referanslar
 
 - Koussios, S. — "Filament Winding: A Unified Approach" (birincil referans)
 - Do Carmo — "Differential Geometry of Curves and Surfaces"
