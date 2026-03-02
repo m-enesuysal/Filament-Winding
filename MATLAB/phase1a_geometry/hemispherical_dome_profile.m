@@ -160,5 +160,25 @@ function [profil] = hemispherical_dome_profile(R_eq, r0, N_pts)
     profil.s_total   = s_total;
     profil.h_dome    = h_dome;
     profil.A_dome    = A_dome;
+    alpha_w = asin(r0 ./ rho);
+    alpha_w(end) = pi/2;  % Polar açıklıkta tanım gereği 90°
+
+    profil.alpha_w   = alpha_w;
+    profil.kappa_eq  = 1 / R_eq;             % Sabit eğrilik — küre özelliği
+    profil.kappa_pol = 1 / R_eq;             % Polar'da da aynı — küre
+    profil.aspect_r  = h_dome / R_eq;        % Dome aspect ratio
+    % --- YAMA BAŞLANGIÇ (hemispherical) ---
+% Geodesic sarım açısı — Clairaut bağıntısı: ρ·sin(α) = r0
+%   Hemispherical dome'da ρ = R_eq·cos(θ), θ = s/R_eq
+%   → sin(α) = r0 / (R_eq·cos(θ))
+%   → α = asin(r0 / ρ)
+%   Ekvator: α_eq = asin(r0 / R_eq)
+%   Polar:   α_pol = π/2 (tanım gereği — fiber polarda teğet)
+
+% !! DİKKAT: Bu satırlar profil fonksiyonuna eklenecek, ayrı çalıştırılmayacak !!
+
+    % Geodesic sarım açısı (Clairaut)
+    
+
 
 end

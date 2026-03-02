@@ -238,5 +238,12 @@ function [profil] = ellipsoidal_dome_profile(R_eq, r0, k, N_pts)
     profil.s_total   = s_total;
     profil.h_dome    = h_dome;
     profil.A_dome    = A_dome;
+    alpha_w = asin(r0 ./ rho);
+    alpha_w(end) = pi/2;  % Polar açıklıkta tanım gereği 90°
+
+    profil.alpha_w   = alpha_w;
+    profil.kappa_eq  = kappa_m(1);            % 1/(R_eq·k²)
+    profil.kappa_pol = kappa_m(end);          % k / (R_eq·f³(θ_p))
+    profil.aspect_r  = h_dome / R_eq;         % = k·sin(θ_p)
 
 end
