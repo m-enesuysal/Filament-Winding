@@ -68,14 +68,50 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 # Bağımlılıklar (Karar-19)
 # ---------------------------------------------------------------------------
 
+# FetchContent modülü — tüm indirme işlemleri için ortak
+include(FetchContent)
+
+# ---------------------------------------------------------------------------
 # Boost (Odeint — header-only, Karar-6: ODE çözücü)
-find_package(Boost REQUIRED)
+# CMake 4.x notu: FindBoost modülü kaldırıldı (CMP0167).
+# Önce CONFIG modunda (modern Boost CMake entegrasyonu) aranır.
+# Bulunamazsa FetchContent ile boost-cmake sürümü indirilir.
+# Karar-6: IsotensoidProfile için Dormand-Prince (RK45) çözücü
+# ---------------------------------------------------------------------------
+find_package(Boost CONFIG QUIET)
+
+if(NOT Boost_FOUND)
+    message(STATUS "Boost CONFIG bulunamadı — FetchContent ile indiriliyor...")
+    FetchContent_Declare(
+        Boost
+        URL https://github.com/boostorg/boost/releases/download/boost-1.87.0/boost-1.87.0-cmake.tar.xz
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    # Boost.Odeint header-only: numeric kütüphanesi derlenmez,
+    # sadece Boost::boost include-path hedefi gereklidir.
+    set(BOOST_SKIP_INSTALL_RULES OFF)
+    FetchContent_MakeAvailable(Boost)
+    message(STATUS "Boost FetchContent ile hazır")
+endif()
 
 # Eigen3 (Lineer cebir, Karar-19)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.3 QUIET NO_MODULE)
+if(NOT Eigen3_FOUND)
+    message(STATUS "Eigen3 bulunamadı — FetchContent ile indiriliyor...")
+    FetchContent_Declare(
+        Eigen3
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG        3.4.0
+        GIT_SHALLOW    TRUE
+    )
+    # Eigen3 header-only: yalnızca include dizini gerekli
+    set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(Eigen3)
+    message(STATUS "Eigen3 FetchContent ile hazır")
+endif()
 
 # Google Test (Karar-19)
-include(FetchContent)
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git

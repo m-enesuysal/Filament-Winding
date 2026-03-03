@@ -23,7 +23,20 @@ target_include_directories(filament_core
 
 target_link_libraries(filament_core
     PUBLIC
-        Boost::boost
         Eigen3::Eigen
         nlohmann_json::nlohmann_json
 )
+
+# Boost hedef adı kurulum yöntemine göre farklı:
+#   - System/vcpkg: Boost::boost  (FindBoost veya BoostConfig)
+#   - FetchContent tarball (Boost 1.80+): Boost::headers
+if(TARGET Boost::boost)
+    target_link_libraries(filament_core PUBLIC Boost::boost)
+elseif(TARGET Boost::headers)
+    target_link_libraries(filament_core PUBLIC Boost::headers)
+else()
+    message(WARNING
+        "Boost hedefi bulunamadı (Boost::boost veya Boost::headers). "
+        "IsotensoidProfile (S5) Boost.Odeint gerektirdiğinden bu aşamada "
+        "placeholder olarak derleniyor. Boost'u kurun veya CMAKE_PREFIX_PATH ayarlayın.")
+endif()

@@ -87,7 +87,63 @@ private:
     ProfileMetadata metadata_{};
     bool valid_ = false;
 
-    // Kubik spline katsayilari (S2'de hesaplanacak)
+    // -----------------------------------------------------------------------
+    // Kubik spline katsayi yapisi
+    // S(s) = values[i] + b[i]*dt + c[i]*dt^2 + d[i]*dt^3
+    // dt = s - s_[i], i: segment indeksi, a[i] = values[i] (harici)
+    // n+1 dugum icin n adet interval katsayisi
+    // -----------------------------------------------------------------------
+    struct CubicSpline {
+        std::vector<double> b;  // Lineer katsayi
+        std::vector<double> c;  // Karesel katsayi
+        std::vector<double> d;  // Kubik katsayi
+    };
+
+    CubicSpline sp_rho_;     // rho(s) spline
+    CubicSpline sp_x_;       // x_local(s) spline
+    CubicSpline sp_drho_;    // drho_ds(s) spline
+    CubicSpline sp_dx_;      // dx_ds(s) spline
+    CubicSpline sp_kappa_;   // kappa_m(s) spline
+
+    // -----------------------------------------------------------------------
+    // Dogal kubik spline katsayi hesabi (Thomas algoritmasi)
+    // Sinir kosullari: M_0 = M_n = 0 (ikinci turev sinirda sifir)
+    // knots ve values n+1 elemanli olmali
+    // -----------------------------------------------------------------------
+    static CubicSpline buildNaturalSpline(
+        const std::vector<double>& knots,
+        const std::vector<double>& values);
+
+    // -----------------------------------------------------------------------
+    // Clamped kubik spline katsayi hesabi (Thomas algoritmasi)
+    // Sinir kosullari: S'(x_0) = slope_left, S'(x_n) = slope_right
+    // knots ve values n+1 elemanli olmali
+    // Karar-9: Dogrulugu bilinen endpoint turevleriyle hata azaltimi
+    // -----------------------------------------------------------------------
+    static CubicSpline buildClampedSpline(
+        const std::vector<double>& knots,
+        const std::vector<double>& values,
+        double slope_left,
+        double slope_right);
+
+    // -----------------------------------------------------------------------
+    // Binary search ile segment indeksi — O(log n)
+    // Dondurur: i oyle ki knots[i] <= s_query <= knots[i+1]
+    // Sinir durumu: s_query == knots.back() → son segment indeksi
+    // -----------------------------------------------------------------------
+    static std::size_t findSegment(
+        const std::vector<double>& knots,
+        double s_query);
+
+    // -----------------------------------------------------------------------
+    // Tek buyukluk icin spline degerlendirmesi
+    // seg: findSegment() ciktisi, ds: s - s_[seg]
+    // -----------------------------------------------------------------------
+    static double evalSpline(
+        const std::vector<double>& values,
+        const CubicSpline& sp,
+        std::size_t seg,
+        double ds);
 };
 
 } // namespace geometry

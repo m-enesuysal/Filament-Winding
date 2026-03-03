@@ -6,6 +6,7 @@ enable_testing()
 
 set(TEST_SOURCES
     test_placeholder.cpp
+    test_meridian_lookup_table.cpp
 )
 
 add_executable(filament_tests ${TEST_SOURCES})
