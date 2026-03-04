@@ -61,25 +61,62 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif()
 
-# Karar-19: Release -O2 (CMake varsayılan -O3 yerine)
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+# Karar-19: Release -O2 (CMake varsayilan -O3 yerine)
+if(MSVC)
+    string(REPLACE "/O2" "/O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+else()
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+endif()
+
+# MSVC icin W4 uyari seviyesi (Karar-19 karsiligi)
+if(MSVC)
+    add_compile_options(/W4 /permissive-)
+    # IEEE 754 uyumlulugu: /fp:precise (MSVC varsayilan, -ffast-math karsiligi)
+    add_compile_options(/fp:precise)
+endif()
 
 # ---------------------------------------------------------------------------
-# Bağımlılıklar (Karar-19)
+# Bagimliliklar (Karar-19)
 # ---------------------------------------------------------------------------
+include(FetchContent)
 
-# Boost (Odeint — header-only, Karar-6: ODE çözücü)
-find_package(Boost REQUIRED)
+# Boost (Odeint — header-only, Karar-6: ODE cozucu)
+# Not: S5 (IsotensoidProfile) icin gerekli. Bulunamazsa bos target olusturulur.
+find_package(Boost QUIET)
+if(NOT Boost_FOUND)
+    message(STATUS "Boost bulunamadi — bos interface target olusturuluyor.")
+    message(STATUS "  IsotensoidProfile (S5) icin Boost kurulumu gerekecek.")
+    if(NOT TARGET Boost::boost)
+        add_library(boost_placeholder INTERFACE)
+        add_library(Boost::boost ALIAS boost_placeholder)
+    endif()
+    set(Boost_VERSION "bulunamadi")
+endif()
 
 # Eigen3 (Lineer cebir, Karar-19)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+# Sistemde bulunamazsa FetchContent ile indir
+find_package(Eigen3 3.3 QUIET NO_MODULE)
+if(NOT Eigen3_FOUND)
+    message(STATUS "Eigen3 bulunamadi — FetchContent ile indiriliyor...")
+    FetchContent_Declare(
+        eigen
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG        3.4.0
+        GIT_SHALLOW    TRUE
+    )
+    set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+    set(EIGEN_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(eigen)
+    set(Eigen3_VERSION "3.4.0 (FetchContent)")
+endif()
 
 # Google Test (Karar-19)
-include(FetchContent)
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG        v1.14.0
+    GIT_SHALLOW    TRUE
 )
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
@@ -89,6 +126,7 @@ FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        v3.11.3
+    GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(nlohmann_json)
 

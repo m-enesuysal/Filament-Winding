@@ -4,6 +4,7 @@
 
 #include "geometry/ellipsoidal_profile.h"
 #include <stdexcept>
+#include <string>
 
 namespace filament {
 namespace geometry {
