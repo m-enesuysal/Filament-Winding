@@ -9,6 +9,7 @@ set(TEST_SOURCES
     test_meridian_lookup_table.cpp
     test_hemispherical_profile.cpp
     test_ellipsoidal_profile.cpp
+    test_isotensoid_profile.cpp
 )
 
 add_executable(filament_tests ${TEST_SOURCES})
