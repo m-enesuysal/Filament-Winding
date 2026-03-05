@@ -7,6 +7,8 @@ enable_testing()
 set(TEST_SOURCES
     test_placeholder.cpp
     test_meridian_lookup_table.cpp
+    test_hemispherical_profile.cpp
+    test_ellipsoidal_profile.cpp
 )
 
 add_executable(filament_tests ${TEST_SOURCES})
