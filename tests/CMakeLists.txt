@@ -12,6 +12,7 @@ set(TEST_SOURCES
     test_isotensoid_profile.cpp
     test_mandrel_geometry.cpp
     test_gate_1b_01.cpp
+    test_config_parser.cpp
 )
 
 add_executable(filament_tests ${TEST_SOURCES})
