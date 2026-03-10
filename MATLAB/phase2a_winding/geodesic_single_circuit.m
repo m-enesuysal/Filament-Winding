@@ -76,27 +76,31 @@ function [circuit] = geodesic_single_circuit(dome_profile, R_eq, r0, L_cyl, BW_e
     s_dome_total = dome_profile.s_total;
     s_eps        = dome_result.s_epsilon;
 
+    % Fiber donus noktasi: rho(s_turn) = R_E (Eq. 4.4, alpha = pi/2)
+    % rho monoton azalan -> flip ile ters sorgu
+    s_turn = interp1(flipud(dome_profile.rho), flipud(dome_profile.s), R_E, 'pchip');
+
     % ODE ciktisi: s in [0, s_eps] -> phi in [0, phi_numerical]
     phi_ode_interp = griddedInterpolant(dome_result.s_ode, ...
                                          dome_result.phi_ode, 'pchip');
 
-    % Kuyruk bolgesi: s in [s_eps, s_total]
-    % Eq. 6.6 yaklasimi: phi(s) ~ phi_num + phi_tail * sqrt((s-s_eps)/(s_total-s_eps))
+    % Kuyruk bolgesi: s in [s_eps, s_turn]
+    % Eq. 6.6 yaklasimi: phi(s) ~ phi_num + phi_tail * sqrt((s-s_eps)/(s_turn-s_eps))
     % Birlesik phi(s) tablosu olustur
     N_main = 500;
     N_tail_pts = 50;
     s_main = linspace(0, s_eps, N_main)';
     phi_main = phi_ode_interp(s_main);
 
-    s_tail = linspace(s_eps, s_dome_total, N_tail_pts + 1)';
+    s_tail = linspace(s_eps, s_turn, N_tail_pts + 1)';
     s_tail = s_tail(2:end);  % ilki zaten s_eps
-    t_norm = (s_tail - s_eps) / (s_dome_total - s_eps + 1e-30);
+    t_norm = (s_tail - s_eps) / (s_turn - s_eps + 1e-30);
     phi_tail_vals = dome_result.phi_numerical + dome_result.phi_tail * sqrt(t_norm);
 
     s_dome_tab   = [s_main; s_tail];
     phi_dome_tab = [phi_main; phi_tail_vals];
 
-    % phi_dome_func: s -> phi(s) dome icinde [0, s_total] -> [0, phi_dome]
+    % phi_dome_func: s -> phi(s) dome icinde [0, s_turn] -> [0, phi_dome]
     phi_dome_func = @(s_q) interp1(s_dome_tab, phi_dome_tab, s_q, 'pchip');
 
     %% --- Profil interpolantlari ---
@@ -106,13 +110,13 @@ function [circuit] = geodesic_single_circuit(dome_profile, R_eq, r0, L_cyl, BW_e
     kappa_interp = griddedInterpolant(dome_profile.s, dome_profile.kappa_m, 'pchip');
 
     %% --- Segment nokta sayilari ---
-    s_half = s_dome_total + L_cyl + s_dome_total;
+    s_half = s_turn + L_cyl + s_turn;
     N_half = round(N_points / 2);
-    N_d = max(round(N_half * s_dome_total / s_half), 30);
+    N_d = max(round(N_half * s_turn / s_half), 30);
     N_c = max(N_half - 2 * N_d, 30);
 
     %% --- Dome uniform gridi ---
-    s_d = linspace(0, s_dome_total, N_d)';
+    s_d = linspace(0, s_turn, N_d)';
     rho_d = rho_interp(s_d);
     x_d   = x_interp(s_d);
     phi_d = phi_dome_func(s_d);  % 0 -> phi_dome (ekvator -> donus)
@@ -201,10 +205,10 @@ function [circuit] = geodesic_single_circuit(dome_profile, R_eq, r0, L_cyl, BW_e
                                        dome_profile, L_cyl, R_eq, ...
                                        rho_interp, drho_interp, kappa_interp);
 
-    bridging_idx = find(kn_all <= 0);
+    bridging_idx = find(kn_all < -1e-10);
     if ~isempty(bridging_idx)
         warning('geodesic_single_circuit:bridging', ...
-                'S-WIND-04: %d noktada kn <= 0 (bridging riski).', ...
+                'S-WIND-04: %d noktada kn < 0 (bridging riski).', ...
                 numel(bridging_idx));
     end
 
