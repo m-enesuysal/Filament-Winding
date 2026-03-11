@@ -31,6 +31,12 @@ struct MeridianPoint {
     double kappa_m;  // Meridyen egriligi [1/mm]
 };
 
+// Ters sorgu sonucu: rho -> (s, x)
+struct InversePoint {
+    double s;        // Yay uzunlugu [mm]
+    double x_local;  // Aksiyel konum [mm]
+};
+
 // Skaler profil meta-verisi (struct arayuz yamasi uyumlu)
 struct ProfileMetadata {
     double R_eq      = 0.0;  // Ekvator yaricapi [mm]
@@ -63,6 +69,11 @@ public:
     // Alt katman (Karar-17): exception firlatmaz, std::optional doner
     // s araligi disinda veya gecersiz tablo icin std::nullopt doner
     std::optional<MeridianPoint> query(double s) const;
+
+    // Ters sorgu: rho -> (s, x_local) — PCHIP interpolasyon
+    // Monoton azalan rho(s) profili icin; rho araligi disinda std::nullopt doner
+    // Phase-2a S3: geodesic yol hesabinda rho'dan s ve x geri cozumu
+    std::optional<InversePoint> inverseLookup(double rho) const;
 
     // Meta-veri erisimi
     const ProfileMetadata& metadata() const;
@@ -121,6 +132,13 @@ private:
 
     // Kubik polinom degerlendirme (Horner yontemi)
     static double evalPoly(const SplineCoeffs& coeff, std::size_t i, double t);
+
+    // -----------------------------------------------------------------------
+    // Ters sorgu altyapisi (forward spline + bisection)
+    // -----------------------------------------------------------------------
+    // rho monoton azalir: rho_[0] = R_eq > rho_[n-1] = r0
+    // inverseLookup: rho -> binary search + bisection on rho(s) spline -> s, x
+    // Forward spline hassasiyetini (Karar-11 Katman 2) korur.
 };
 
 } // namespace geometry
