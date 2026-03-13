@@ -12,6 +12,7 @@ set(GEOMETRY_SOURCES
     isotensoid_profile.cpp
     mandrel_geometry.cpp
     config_parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/geodesic/geodesic_solver.cpp
 )
 
 add_library(filament_core STATIC ${GEOMETRY_SOURCES})
