@@ -445,7 +445,7 @@ static const ScenarioConfig kAllScenarios[] = {
     {"S3", "isotensoid",     geometry::DomeType::Isotensoid,    100,   20, 150,  6, 1.0,
      "geodesic_ref_isotensoid_S3.csv"},
     {"S4", "isotensoid",     geometry::DomeType::Isotensoid,    120,   50, 250,  8, 1.0,
-     nullptr},  // CSV mevcut degil
+     "geodesic_ref_isotensoid_S4.csv"},
 };
 
 INSTANTIATE_TEST_SUITE_P(
