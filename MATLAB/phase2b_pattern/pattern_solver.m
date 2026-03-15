@@ -92,7 +92,7 @@ fprintf('  Δφ/(2π)    = %.6f (ideal q/p oranı)\n\n', geo.delta_phi_circuit /
 
 %% === ADIM 3: Uyumlu p/q pattern arama ===
 fprintf('--- Adım 3: Pattern Arama (Angle-Driven Mod) ---\n');
-patterns = find_compatible_patterns(geo.delta_phi_circuit, alpha_eq, R_eq, BW_eff, d, coverage_range);
+patterns = find_compatible_patterns(geo.delta_phi_circuit, alpha_eq, R_eq, BW_eff, L_cyl, d, coverage_range);
 
 if isempty(patterns)
     fprintf('  *** UYARI: Uyumlu pattern bulunamadı! ***\n');
@@ -100,17 +100,17 @@ if isempty(patterns)
     return;
 end
 
-%% === ADIM 4: Sonuçları göster ===
-fprintf('\n  Bulunan %d uyumlu pattern (angular_error sıralı):\n\n', numel(patterns));
-fprintf('  %4s  %4s  %4s  %10s  %10s  %12s  %12s\n', ...
-        'p', 'q', 'n', 'Coverage%', 'Overlap%', 'AngErr[rad]', 'AngErr[°]');
-fprintf('  %s\n', repmat('-', 1, 68));
+%% === ADIM 4: Sonuçları göster (K-2b-04: p sıralı) ===
+fprintf('\n  Bulunan %d uyumlu pattern (p sıralı, K-2b-04):\n\n', numel(patterns));
+fprintf('  %4s  %4s  %4s  %10s  %10s  %10s  %10s  %12s\n', ...
+        'p', 'q', 'n', 'Coverage%', 'Overlap%', 'ΔL_cyl[mm]', 'L_adj[mm]', 'AngErr[°]');
+fprintf('  %s\n', repmat('-', 1, 82));
 
 for i = 1:numel(patterns)
     pat = patterns(i);
-    fprintf('  %4d  %4d  %4d  %10.2f  %10.2f  %12.6f  %12.4f\n', ...
+    fprintf('  %4d  %4d  %4d  %10.2f  %10.2f  %10.3f  %10.2f  %12.4f\n', ...
             pat.p, pat.q, pat.n, pat.coverage_pct, pat.overlap_pct, ...
-            pat.angular_error, pat.angular_error_deg);
+            pat.delta_L_cyl, pat.L_cyl_adj, pat.angular_error_deg);
 end
 
 %% === ADIM 5: En iyi pattern detayları ===
@@ -123,6 +123,8 @@ fprintf('  Δφ_ideal = 2π·%d/%d = %.6f rad = %.4f°\n', ...
         best.q, best.p, best.delta_phi_ideal, best.delta_phi_ideal*180/pi);
 fprintf('  Δφ_actual = %.6f rad\n', geo.delta_phi_circuit);
 fprintf('  Açısal hata = %.6f rad = %.4f°\n', best.angular_error, best.angular_error_deg);
+fprintf('  ΔL_cyl = %.3f mm (silindir ince ayar)\n', best.delta_L_cyl);
+fprintf('  L_cyl_adj = %.2f mm\n', best.L_cyl_adj);
 fprintf('  Kaplama = %.2f%%\n', best.coverage_pct);
 fprintf('  Örtüşme = %.2f%%\n', best.overlap_pct);
 

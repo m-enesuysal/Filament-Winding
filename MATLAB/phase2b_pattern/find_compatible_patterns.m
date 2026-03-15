@@ -1,8 +1,9 @@
-function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, BW_eff, d, coverage_range)
+function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, BW_eff, L_cyl, d, coverage_range)
 % FIND_COMPATIBLE_PATTERNS  Verilen Δφ_circuit için uyumlu p/q pattern çiftleri bulur.
 %
 % Phase-2b: Pattern generation — angle-driven mod.
 % Karar-13: p/q notasyonu, gcd(p,q)=1 zorunlu (S-PAT-02).
+% K-2b-04: Varsayılan sıralama p küçükten büyüğe.
 %
 % MATEMATİK:
 %   Pattern kapatma koşulu: p · Δφ_circuit = 2π · q
@@ -10,21 +11,24 @@ function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, 
 %   Tam kaplama bant sayısı: n_max = floor(2π·R_eq·d·cos(α_eq) / BW_eff)
 %   Ekvator kaplama: coverage = n · BW_eff / (2π · R_eq · d · cos(α_eq)) × 100%
 %   Overlap: coverage - 100%
+%   L_cyl ince ayar: ΔL = (2πq/p − Δφ_actual) · R_eq / (2·tan(α_eq))
+%   L_cyl_adj = L_cyl + ΔL; L_cyl_adj < 0 → pattern elenir.
 %
 % KULLANIM:
-%   patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, BW_eff)
-%   patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, BW_eff, d, coverage_range)
+%   patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, BW_eff, L_cyl)
+%   patterns = find_compatible_patterns(..., d, coverage_range)
 %
 % GİRDİLER:
 %   delta_phi_circuit — Tek devre toplam açısal ilerleme [rad]
 %   alpha_eq          — Ekvator winding açısı [rad]
 %   R_eq              — Ekvator yarıçapı [mm]
 %   BW_eff            — Efektif bant genişliği [mm]
+%   L_cyl             — Mevcut silindir uzunluğu [mm]
 %   d                 — Winding pattern skip index [-] (varsayılan: 1)
 %   coverage_range    — [min, max] kaplama yüzdesi (varsayılan: [100, 150])
 %
 % ÇIKTI:
-%   patterns — Struct dizisi, alanlar:
+%   patterns — Struct dizisi (p küçükten büyüğe sıralı), alanlar:
 %     .p              — Devre sayısı (circuits per pattern)
 %     .q              — Tam tur sayısı (full revolutions per circuit)
 %     .n              — Toplam bant sayısı (= 2·p)
@@ -33,16 +37,18 @@ function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, 
 %     .delta_phi_ideal — İdeal Δφ_circuit = 2πq/p [rad]
 %     .angular_error  — |Δφ_circuit - 2πq/p| [rad]
 %     .angular_error_deg — |Δφ_circuit - 2πq/p| [°]
+%     .delta_L_cyl    — Silindir ince ayar miktarı [mm]
+%     .L_cyl_adj      — Ayarlanmış silindir uzunluğu [mm]
 %
-% Referans: Karar-13, S-PAT-01, S-PAT-02
-% Tarih: 2026-03-15
+% Referans: Karar-13, S-PAT-01, S-PAT-02, K-2b-04
+% Tarih: 2026-03-16
 % Faz: Phase-2b
 
     %% --- Varsayılan parametreler ---
-    if nargin < 5 || isempty(d)
+    if nargin < 6 || isempty(d)
         d = 1;
     end
-    if nargin < 6 || isempty(coverage_range)
+    if nargin < 7 || isempty(coverage_range)
         coverage_range = [100, 150];
     end
 
@@ -68,6 +74,10 @@ function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, 
         error('find_compatible_patterns:gecersizD', ...
               'd pozitif tamsayı olmalıdır. Girilen: %g', d);
     end
+    if L_cyl < 0
+        error('find_compatible_patterns:negativeLcyl', ...
+              'L_cyl >= 0 olmalıdır. Girilen: %g', L_cyl);
+    end
     if numel(coverage_range) ~= 2 || coverage_range(1) >= coverage_range(2)
         error('find_compatible_patterns:gecersizCoverage', ...
               'coverage_range = [min, max] olmalı ve min < max.');
@@ -75,6 +85,7 @@ function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, 
 
     coverage_min = coverage_range(1);
     coverage_max = coverage_range(2);
+    tan_alpha = tan(alpha_eq);        % ΔL_cyl hesabı için
 
     %% --- p aralığını coverage kısıtından belirle ---
     % n = 2·p (her devre 2 ekvator geçişi: forward + return)
@@ -133,6 +144,16 @@ function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, 
         delta_phi_ideal = 2 * pi * q / p;
         angular_error   = abs(delta_phi_circuit - delta_phi_ideal);
 
+        % L_cyl ince ayar (Karar-13: S-PAT-01)
+        % ΔL = (2πq/p − Δφ_actual) · R_eq / (2·tan(α_eq))
+        delta_L_cyl = (delta_phi_ideal - delta_phi_circuit) * R_eq / (2 * tan_alpha);
+        L_cyl_adj   = L_cyl + delta_L_cyl;
+
+        % L_cyl_adj < 0 → fiziksel olarak imkansız, pattern elenir
+        if L_cyl_adj < 0
+            continue;
+        end
+
         % Kaplama hesabı
         % n = 2·p, coverage = n·BW_eff / (2π·R_eq·d·cos(α_eq)) × 100
         n = 2 * p;
@@ -149,16 +170,18 @@ function patterns = find_compatible_patterns(delta_phi_circuit, alpha_eq, R_eq, 
         results(count).delta_phi_ideal = delta_phi_ideal;           %#ok<AGROW>
         results(count).angular_error   = angular_error;             %#ok<AGROW>
         results(count).angular_error_deg = angular_error * 180/pi;  %#ok<AGROW>
+        results(count).delta_L_cyl    = delta_L_cyl;                %#ok<AGROW>
+        results(count).L_cyl_adj      = L_cyl_adj;                  %#ok<AGROW>
     end
 
-    %% --- Sonuçları angular_error'a göre sırala ---
+    %% --- Sonuçları p'ye göre sırala (K-2b-04: küçükten büyüğe) ---
     if isempty(results)
         warning('find_compatible_patterns:sonucYok', ...
                 'Coverage aralığı [%.1f, %.1f]%% ve gcd(p,q)=1 koşulunda uyumlu pattern bulunamadı.', ...
                 coverage_min, coverage_max);
         patterns = [];
     else
-        [~, sort_idx] = sort([results.angular_error], 'ascend');
+        [~, sort_idx] = sort([results.p], 'ascend');
         patterns = results(sort_idx);
     end
 
