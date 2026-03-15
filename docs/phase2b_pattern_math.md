@@ -58,6 +58,7 @@ kaplama hesabı hepsi bu tabloya dayanır.
 | K-2b-02 | L_cyl düzeltme sınırsız, %1 varsayılan uyarı eşiği | İnce ayar |
 | K-2b-03 | Her katman farklı α kullanabilir | Sekans esnekliği |
 | K-2b-04 | Tablo varsayılan sıralama: p küçükten büyüğe | Çıktı formatı |
+| K-2b-07 | T6 Diophantine koşulu bilgi raporu — strict koşul zorunlu değil, coverage-based arama esas (Yaklaşım A) | T6 CONDITIONAL PASS |
 
 ---
 
