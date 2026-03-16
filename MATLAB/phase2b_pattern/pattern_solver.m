@@ -24,7 +24,7 @@ fprintf('=== Phase-2b S1: Angle-Driven Pattern Solver ===\n\n');
 %% --- Parametreler ---
 R_eq   = 152.4;    % Ekvator yarıçapı [mm]
 r0     = 45.0;     % Polar açıklık yarıçapı [mm]
-L_cyl  = 300.0;    % Silindir uzunluğu [mm]
+L_cyl  = 1000.0;    % Silindir uzunluğu [mm]
 k      = 0.7;      % Ellipsoidal dome aspect ratio [-]
 BW_eff = 10.0;     % Efektif bant genişliği [mm]
 d      = 1;        % Winding pattern skip index [-]

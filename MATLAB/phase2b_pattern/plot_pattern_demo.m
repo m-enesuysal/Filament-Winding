@@ -12,7 +12,7 @@
 % Tarih: 2026-03-16
 % Faz: Phase-2b S2
 
-clear; clc; close all;
+clear; clc; %close all;
 fprintf('=== Phase-2b Pattern Demo Görselleri ===\n\n');
 
 %% --- Yol bağımlılıkları ---
@@ -191,7 +191,7 @@ for dt = 1:3
     out_file = fullfile(fig_dir, sprintf('pattern_demo_%s.png', dome_types{dt}));
     exportgraphics(fig, out_file, 'Resolution', 200);
     fprintf('  Kaydedildi: %s\n\n', out_file);
-    close(fig);
+    %close(fig);
 end
 
 fprintf('=== Tamamlandi: 3 figure docs/figures/ altina kaydedildi ===\n');

@@ -15,7 +15,7 @@
 % Tarih: 2026-03-16
 % Faz: Phase-2b S2
 
-clear; clc; close all;
+clear; clc; %close all;
 fprintf('=== Phase-2b Full Coverage Gorselleri ===\n\n');
 
 %% --- Yol bagimliliklari ---
@@ -29,7 +29,7 @@ if ~exist(fig_dir, 'dir'), mkdir(fig_dir); end
 %% --- TEST-02 parametreleri ---
 R_eq   = 152.4;
 r0     = 45.0;
-L_cyl  = 300.0;
+L_cyl  = 1000.0;
 BW_eff = 10.0;
 k_ell  = 0.7;
 d      = 1;
@@ -77,33 +77,65 @@ for dt = 1:3
     fprintf('  p=%d, q=%d, coverage=%.1f%%, L_cyl_adj=%.2f mm\n', ...
             p_pat, q_pat, pat.coverage_pct, L_cyl_adj);
 
-    %% === Dome geodesic yol hesabi ===
+    %% === Dome geodesic yol hesabi (Phase-2a composite approach) ===
+    % Singularite-free: numerical (0→s_cut) + analytical tail (s_cut→s_turn)
     rho_d  = dome.rho;
     s_d    = dome.s;
     x_d    = dome.x_local;
     h_dome = x_d(end);
 
-    % Donus noktasi (rho = R_E)
-    idx_turn = find(rho_d <= R_E, 1, 'first');
-    if isempty(idx_turn), idx_turn = length(rho_d); end
-
-    % Forward yol (ekvator -> donus)
-    rho_fwd = rho_d(1:idx_turn);
-    s_fwd   = s_d(1:idx_turn);
-    x_fwd   = x_d(1:idx_turn);
-
-    % phi birikimi (sayisal)
-    rho2_diff = max(rho_fwd.^2 - R_E^2, 1e-10);
-    integrand_phi = R_E ./ (rho_fwd .* sqrt(rho2_diff));
-    phi_fwd_raw = cumtrapz(s_fwd, integrand_phi);
-
-    % Normalize: geo.phi_dome daha dogru (tail correction dahil)
+    % Donus noktasi s_turn (geo ciktisi — rho = R_E noktasi)
+    s_turn = geo.s_turn;
     phi_dome_half = geo.phi_dome;
-    if phi_fwd_raw(end) > 0
-        phi_fwd = phi_fwd_raw * (phi_dome_half / phi_fwd_raw(end));
-    else
-        phi_fwd = phi_fwd_raw;
-    end
+
+    % --- (1) Numerical region: s = 0 to s_cut (rho safely above R_E) ---
+    epsilon_phi = 1.0;   % mm — singularity safety margin
+    rho_cut = R_E + epsilon_phi;
+
+    % s_cut: s noktasi where rho(s_cut) = R_E + epsilon_phi
+    [rho_sorted, sort_idx] = sort(rho_d, 'ascend');
+    s_sorted = s_d(sort_idx);
+    [rho_uniq, uniq_idx] = unique(rho_sorted, 'stable');
+    s_uniq = s_sorted(uniq_idx);
+    s_cut = interp1(rho_uniq, s_uniq, rho_cut, 'pchip');
+
+    N_num = 500;
+    s_num = linspace(0, s_cut, N_num)';
+    rho_num = interp1(s_d, rho_d, s_num, 'pchip');
+    x_num   = interp1(s_d, x_d,   s_num, 'pchip');
+    rho_num(1) = R_eq;  % ekvator sinir
+
+    rho2_diff = rho_num.^2 - R_E^2;    % tumu pozitif (rho > R_E + 1mm)
+    integrand_phi = R_E ./ (rho_num .* sqrt(rho2_diff));
+    phi_num = cumtrapz(s_num, integrand_phi);
+    phi_at_cut = phi_num(end);
+
+    % --- (2) Analytical tail: s_cut to s_turn ---
+    % Phase-2a Eq. 6.6: phi(s) ~ phi_cut + phi_remaining * sqrt(t_norm)
+    phi_remaining = phi_dome_half - phi_at_cut;
+
+    N_tail = 100;
+    s_tail = linspace(s_cut, s_turn, N_tail + 1)';
+    s_tail = s_tail(2:end);   % ilki zaten s_num'da
+    t_norm = (s_tail - s_cut) / (s_turn - s_cut + 1e-30);
+    phi_tail_vals = phi_at_cut + phi_remaining * sqrt(t_norm);
+
+    rho_tail = interp1(s_d, rho_d, s_tail, 'pchip');
+    rho_tail = max(rho_tail, R_E);   % clamp: turnaround altina dusme
+    x_tail   = interp1(s_d, x_d,   s_tail, 'pchip');
+
+    % --- (3) Combine: s_fwd [0, s_turn], phi_fwd [0, phi_dome_half] ---
+    s_fwd   = [s_num; s_tail];
+    rho_fwd = [rho_num; rho_tail];
+    x_fwd   = [x_num; x_tail];
+    phi_fwd = [phi_num; phi_tail_vals];
+
+    % Kesin sinir degerleri
+    rho_fwd(1) = R_eq;   x_fwd(1) = 0;
+    rho_fwd(end) = R_E;  phi_fwd(end) = phi_dome_half;
+
+    fprintf('  Dome yol nokta: %d (num=%d + tail=%d), s_turn=%.2f mm\n', ...
+            length(s_fwd), N_num, N_tail, s_turn);
 
     % Silindir phi (L_cyl_adj ile)
     phi_cyl = L_cyl_adj * tan(alpha_eq) / R_eq;
@@ -155,6 +187,29 @@ for dt = 1:3
 
     delta_phi_circuit = circuit_phi(end);  % = 4*phi_dome + 2*phi_cyl
 
+    %% === Smooth resampling: 500 esit aralikli noktaya pchip ===
+    % Kumulatif yay uzunlugu parametresi
+    dx = diff(circuit_x);
+    drho = diff(circuit_rho);
+    dphi_seg = diff(circuit_phi);
+    rho_avg = (circuit_rho(1:end-1) + circuit_rho(2:end)) / 2;
+    ds_arc = sqrt(dx.^2 + drho.^2 + (rho_avg .* dphi_seg).^2);
+    s_cum = [0; cumsum(ds_arc)];
+    s_total_circuit = s_cum(end);
+
+    N_resample = 1500;
+    s_uniform = linspace(0, s_total_circuit, N_resample)';
+
+    circuit_x   = interp1(s_cum, circuit_x,   s_uniform, 'pchip');
+    circuit_rho = interp1(s_cum, circuit_rho, s_uniform, 'pchip');
+    circuit_phi = interp1(s_cum, circuit_phi, s_uniform, 'pchip');
+
+    % Sinir degerlerini koru
+    circuit_phi(end) = delta_phi_circuit;
+
+    fprintf('  Circuit resampled: %d -> %d nokta (pchip, s_total=%.1f mm)\n', ...
+            length(s_cum), N_resample, s_total_circuit);
+
     %% === Fiber uzunlugu ===
     cy_ref = circuit_rho .* cos(circuit_phi);
     cz_ref = circuit_rho .* sin(circuit_phi);
@@ -162,6 +217,115 @@ for dt = 1:3
     fiber_one = sum(ds_fib);
     fiber_total_m = p_pat * fiber_one / 1000;
     fprintf('  Fiber: %.1f m (tek devre %.1f mm)\n', fiber_total_m, fiber_one);
+
+    %% === DOGRULAMA BLOGU ===
+    fprintf('\n  --- Dogrulama ---\n');
+
+    % (A) Segment sinir phi degerleri ve sureklilik
+    bnd = struct();
+    bnd.seg1_end   = seg1_phi(end);
+    bnd.seg2_start = seg2_phi(1);
+    bnd.seg2_end   = seg2_phi(end);
+    bnd.seg3_start = seg3_phi(1);
+    bnd.seg3_end   = seg3_phi(end);
+    bnd.seg4_start = seg4_phi(1);
+    bnd.seg4_end   = seg4_phi(end);
+    bnd.seg5_start = seg5_phi(1);
+    bnd.seg5_end   = seg5_phi(end);
+    bnd.seg6_start = seg6_phi(1);
+    bnd.seg6_end   = seg6_phi(end);
+
+    fprintf('  phi segment sinirlari [rad] / [deg]:\n');
+    fprintf('    seg1 end  : %10.6f (%7.2f deg)\n', bnd.seg1_end, rad2deg(bnd.seg1_end));
+    fprintf('    seg2 start: %10.6f (%7.2f deg)  gap: %.2e\n', bnd.seg2_start, rad2deg(bnd.seg2_start), abs(bnd.seg2_start - bnd.seg1_end));
+    fprintf('    seg2 end  : %10.6f (%7.2f deg)\n', bnd.seg2_end, rad2deg(bnd.seg2_end));
+    fprintf('    seg3 start: %10.6f (%7.2f deg)  gap: %.2e\n', bnd.seg3_start, rad2deg(bnd.seg3_start), abs(bnd.seg3_start - bnd.seg2_end));
+    fprintf('    seg3 end  : %10.6f (%7.2f deg)\n', bnd.seg3_end, rad2deg(bnd.seg3_end));
+    fprintf('    seg4 start: %10.6f (%7.2f deg)  gap: %.2e\n', bnd.seg4_start, rad2deg(bnd.seg4_start), abs(bnd.seg4_start - bnd.seg3_end));
+    fprintf('    seg4 end  : %10.6f (%7.2f deg)\n', bnd.seg4_end, rad2deg(bnd.seg4_end));
+    fprintf('    seg5 start: %10.6f (%7.2f deg)  gap: %.2e\n', bnd.seg5_start, rad2deg(bnd.seg5_start), abs(bnd.seg5_start - bnd.seg4_end));
+    fprintf('    seg5 end  : %10.6f (%7.2f deg)\n', bnd.seg5_end, rad2deg(bnd.seg5_end));
+    fprintf('    seg6 start: %10.6f (%7.2f deg)  gap: %.2e\n', bnd.seg6_start, rad2deg(bnd.seg6_start), abs(bnd.seg6_start - bnd.seg5_end));
+    fprintf('    seg6 end  : %10.6f (%7.2f deg)\n', bnd.seg6_end, rad2deg(bnd.seg6_end));
+
+    % (B) Phi monoton artan mi?
+    dphi = diff(circuit_phi);
+    n_neg = sum(dphi < 0);
+    n_zero = sum(dphi == 0);
+    fprintf('  phi monotonluk: dphi<0 = %d, dphi=0 = %d, toplam = %d\n', ...
+            n_neg, n_zero, length(dphi));
+    if n_neg > 0
+        fprintf('  *** BUG: phi monoton DEGIL! %d azalan segment ***\n', n_neg);
+        [min_dphi, min_idx] = min(dphi);
+        fprintf('  *** min(dphi) = %.6e rad, index = %d ***\n', min_dphi, min_idx);
+    else
+        fprintf('  OK: phi kesinlikle monoton artan.\n');
+    end
+
+    % (C) delta_phi_circuit vs ideal 2*pi*q/p
+    ideal_dphi = 2*pi*q_pat/p_pat;
+    dphi_err = abs(delta_phi_circuit - ideal_dphi);
+    fprintf('  delta_phi_circuit = %.10f rad (%.4f deg)\n', delta_phi_circuit, rad2deg(delta_phi_circuit));
+    fprintf('  ideal 2*pi*q/p   = %.10f rad (%.4f deg)\n', ideal_dphi, rad2deg(ideal_dphi));
+    fprintf('  hata             = %.4e rad (%.4e deg)\n', dphi_err, rad2deg(dphi_err));
+
+    % (D) phi_dome ve phi_cyl
+    fprintf('  phi_dome_half = %.6f rad (%.2f deg)\n', phi_dome_half, rad2deg(phi_dome_half));
+    fprintf('  phi_cyl       = %.6f rad (%.2f deg)\n', phi_cyl, rad2deg(phi_cyl));
+    fprintf('  4*phi_dome + 2*phi_cyl = %.10f rad\n', 4*phi_dome_half + 2*phi_cyl);
+
+    % (E) sqrt(Y^2+Z^2) = rho kontrolu (tum devreler icin)
+    max_radial_err = 0;
+    for i = 1:p_pat
+        phi_i = circuit_phi + (i-1) * delta_phi_circuit;
+        y_i = circuit_rho .* cos(phi_i);
+        z_i = circuit_rho .* sin(phi_i);
+        radial_dist = sqrt(y_i.^2 + z_i.^2);
+        radial_err = max(abs(radial_dist - circuit_rho));
+        if radial_err > max_radial_err
+            max_radial_err = radial_err;
+        end
+    end
+    fprintf('  max|sqrt(Y^2+Z^2) - rho| = %.4e mm (tum %d devre)\n', ...
+            max_radial_err, p_pat);
+
+    % (F) Polar aciklik kontrolu
+    rho_min_circuit = min(circuit_rho);
+    fprintf('  rho_min = %.4f mm, R_E = %.1f mm, r0 = %.1f mm\n', ...
+            rho_min_circuit, R_E, r0);
+    if rho_min_circuit < r0
+        fprintf('  *** BUG: Fiber polar acikliga giriyor! rho_min < r0 ***\n');
+    elseif rho_min_circuit < R_E - 0.1
+        fprintf('  *** UYARI: rho_min < R_E (beklenen donus noktasi) ***\n');
+    else
+        fprintf('  OK: rho_min >= R_E, polar aciklik icine girmiyor.\n');
+    end
+
+    % (G) Dome-silindir gecis noktalari pozisyon uyumu
+    % seg2 end -> seg3 start (sag ekvator)
+    seg2_end_xyz = [seg2_x(end), seg2_rho(end)*cos(seg2_phi(end)), seg2_rho(end)*sin(seg2_phi(end))];
+    seg3_start_xyz = [seg3_x(1), seg3_rho(1)*cos(seg3_phi(1)), seg3_rho(1)*sin(seg3_phi(1))];
+    gap23 = norm(seg2_end_xyz - seg3_start_xyz);
+
+    % seg3 end -> seg4 start (sol ekvator)
+    seg3_end_xyz = [seg3_x(end), seg3_rho(end)*cos(seg3_phi(end)), seg3_rho(end)*sin(seg3_phi(end))];
+    seg4_start_xyz = [seg4_x(1), seg4_rho(1)*cos(seg4_phi(1)), seg4_rho(1)*sin(seg4_phi(1))];
+    gap34 = norm(seg3_end_xyz - seg4_start_xyz);
+
+    % seg5 end -> seg6 start (sol ekvator)
+    seg5_end_xyz = [seg5_x(end), seg5_rho(end)*cos(seg5_phi(end)), seg5_rho(end)*sin(seg5_phi(end))];
+    seg6_start_xyz = [seg6_x(1), seg6_rho(1)*cos(seg6_phi(1)), seg6_rho(1)*sin(seg6_phi(1))];
+    gap56 = norm(seg5_end_xyz - seg6_start_xyz);
+
+    fprintf('  Gecis noktasi 3D gap: seg2-3=%.4e, seg3-4=%.4e, seg5-6=%.4e mm\n', ...
+            gap23, gap34, gap56);
+    if max([gap23, gap34, gap56]) > 0.01
+        fprintf('  *** BUG: Segment gecis noktalarinda %f mm boslik! ***\n', max([gap23, gap34, gap56]));
+    else
+        fprintf('  OK: Tum gecis noktalari surekli (<%0.2e mm).\n', max([gap23, gap34, gap56]));
+    end
+
+    fprintf('  --- Dogrulama sonu ---\n\n');
 
     %% === 3D Mandrel mesh ===
     N_th = 80;
@@ -210,21 +374,13 @@ for dt = 1:3
           '-', 'Color', [0.5 0.5 0.5], 'LineWidth', 0.5);
 
     % Donus cemberleri (rho = R_E)
-    x_turn_val = x_d(idx_turn);
+    x_turn_val = x_fwd(end);   % dome x at turnaround
     plot3( (L_cyl_adj/2 + x_turn_val) * ones(N_th,1), ...
           R_E*cos(th_mesh), R_E*sin(th_mesh), ...
           ':', 'Color', [0.8 0.3 0.3], 'LineWidth', 0.8);
     plot3(-(L_cyl_adj/2 + x_turn_val) * ones(N_th,1), ...
           R_E*cos(th_mesh), R_E*sin(th_mesh), ...
           ':', 'Color', [0.8 0.3 0.3], 'LineWidth', 0.8);
-
-    % Polar aciklik cemberleri (rho = r0)
-    plot3( (L_cyl_adj/2 + h_dome) * ones(N_th,1), ...
-          r0*cos(th_mesh), r0*sin(th_mesh), ...
-          '-', 'Color', [0.3 0.3 0.8], 'LineWidth', 0.5);
-    plot3(-(L_cyl_adj/2 + h_dome) * ones(N_th,1), ...
-          r0*cos(th_mesh), r0*sin(th_mesh), ...
-          '-', 'Color', [0.3 0.3 0.8], 'LineWidth', 0.5);
 
     % Sarim yollari (her devre farkli renk)
     cmap_c = turbo(max(p_pat, 2));
@@ -358,11 +514,77 @@ for dt = 1:3
     cb2.Label.FontSize = 10;
     clim(ax2, [1 p_pat]);
 
-    %% === Kaydet ===
+    %% === Kaydet (full coverage) ===
     out_file = fullfile(fig_dir, sprintf('full_coverage_%s.png', dome_types{dt}));
     exportgraphics(fig, out_file, 'Resolution', 200);
-    fprintf('  Kaydedildi: %s\n\n', out_file);
-    close(fig);
+    fprintf('  Kaydedildi: %s\n', out_file);
+    %close(fig);
+
+    %% ================================================================
+    %% === EK FIGURE: Ilk 5 devre (ayri renkler) ===
+    %% ================================================================
+    n_show = min(5, p_pat);
+    colors_5 = [0.0 0.2 0.8;    % 1: mavi
+                0.9 0.1 0.1;    % 2: kirmizi
+                0.9 0.8 0.0;    % 3: sari
+                0.0 0.7 0.2;    % 4: yesil
+                0.6 0.1 0.7];   % 5: mor
+    color_names = {'Mavi','Kirmizi','Sari','Yesil','Mor'};
+
+    fig5 = figure('Position', [80, 80, 1200, 700], 'Color', 'w');
+    hold on;
+
+    % Mandrel yuzeyi
+    surf(X_cm, Y_cm, Z_cm, 'FaceColor', [0.88 0.88 0.88], ...
+         'FaceAlpha', 0.15, 'EdgeColor', 'none');
+    surf(X_dr, Y_dr, Z_dr, 'FaceColor', [0.82 0.86 0.92], ...
+         'FaceAlpha', 0.15, 'EdgeColor', 'none');
+    surf(X_dl, Y_dl, Z_dl, 'FaceColor', [0.82 0.86 0.92], ...
+         'FaceAlpha', 0.15, 'EdgeColor', 'none');
+
+    % Ekvator ve donus cemberleri
+    plot3( L_cyl_adj/2 * ones(N_th,1), R_eq*cos(th_mesh), R_eq*sin(th_mesh), ...
+          '-', 'Color', [0.6 0.6 0.6], 'LineWidth', 0.5);
+    plot3(-L_cyl_adj/2 * ones(N_th,1), R_eq*cos(th_mesh), R_eq*sin(th_mesh), ...
+          '-', 'Color', [0.6 0.6 0.6], 'LineWidth', 0.5);
+    plot3( (L_cyl_adj/2 + x_turn_val) * ones(N_th,1), ...
+          R_E*cos(th_mesh), R_E*sin(th_mesh), ...
+          ':', 'Color', [0.8 0.3 0.3], 'LineWidth', 0.8);
+    plot3(-(L_cyl_adj/2 + x_turn_val) * ones(N_th,1), ...
+          R_E*cos(th_mesh), R_E*sin(th_mesh), ...
+          ':', 'Color', [0.8 0.3 0.3], 'LineWidth', 0.8);
+
+    % Ilk 5 devre
+    leg_entries = gobjects(n_show, 1);
+    for i = 1:n_show
+        phi_i = circuit_phi + (i-1) * delta_phi_circuit;
+        y_i = circuit_rho .* cos(phi_i);
+        z_i = circuit_rho .* sin(phi_i);
+        leg_entries(i) = plot3(circuit_x, y_i, z_i, '-', ...
+            'Color', colors_5(i,:), 'LineWidth', 2.0);
+    end
+
+    axis equal; grid on; box on;
+    xlabel('X [mm]', 'FontSize', 12);
+    ylabel('Y [mm]', 'FontSize', 12);
+    zlabel('Z [mm]', 'FontSize', 12);
+    title(sprintf('%s — Ilk %d Devre (p=%d, q=%d)', ...
+          dome_labels{dt}, n_show, p_pat, q_pat), 'FontSize', 14);
+    view(30, 20);
+    camlight('headlight');
+    lighting gouraud;
+    material dull;
+
+    legend(leg_entries, ...
+        arrayfun(@(k) sprintf('Devre %d (%s)', k, color_names{k}), ...
+                 1:n_show, 'UniformOutput', false), ...
+        'Location', 'eastoutside', 'FontSize', 10);
+
+    % Kaydet (first5)
+    out5 = fullfile(fig_dir, sprintf('first5_%s.png', dome_types{dt}));
+    exportgraphics(fig5, out5, 'Resolution', 200);
+    fprintf('  Kaydedildi: %s\n\n', out5);
+    %close(fig5);
 end
 
 fprintf('=== Tamamlandi: 3 full coverage figure kaydedildi ===\n');
