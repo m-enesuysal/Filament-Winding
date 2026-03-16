@@ -335,10 +335,12 @@ else
 end
 
 %% ================================================================
-%% T7 — Endüstri senaryoları TEST-01..04 (ellipsoidal dome)
+%% T7 — Endüstri senaryoları TEST-01..04 × 3 dome tipi
 %% ================================================================
-fprintf('--- T7: Endüstri test senaryoları TEST-01..04 ---\n');
+fprintf('--- T7: Endüstri test senaryoları TEST-01..04 × 3 dome tipi ---\n');
 t7_pass = true;
+t7_ok   = 0;
+t7_total = 0;
 
 % TEST-01..04 parametreleri (Karar-16 standart test senaryoları)
 test_names = {'TEST-01 (ASTM Subscale)', 'TEST-02 (Endüstriyel COPV)', ...
@@ -346,33 +348,48 @@ test_names = {'TEST-01 (ASTM Subscale)', 'TEST-02 (Endüstriyel COPV)', ...
 test_Req  = [73,    152.4, 150,   200  ];
 test_r0   = [22,    45,    10,    50   ];
 test_Lcyl = [200,   300,   250,   400  ];
-test_k    = [0.7,   0.7,   0.7,   0.7  ];
+k_ell     = 0.7;
 
-for t = 1:4
-    try
-        dome_t = ellipsoidal_dome_profile(test_Req(t), test_r0(t), test_k(t), 1000);
-        geo_t  = geodesic_single_circuit(dome_t, test_Req(t), test_r0(t), test_Lcyl(t), BW_eff);
-        alpha_t = asin((test_r0(t) + BW_eff/2) / test_Req(t));
-        pats_t = find_compatible_patterns(geo_t.delta_phi_circuit, alpha_t, ...
-                                           test_Req(t), BW_eff, test_Lcyl(t), d, coverage_range);
-        np = numel(pats_t);
-        if np > 0
-            fprintf('  %s: %d pattern bulundu (p=%d..%d), Δφ=%.4f rad\n', ...
-                    test_names{t}, np, pats_t(1).p, pats_t(end).p, geo_t.delta_phi_circuit);
-        else
-            fprintf('  %s: WARN — pattern bulunamadı (coverage aralığında)\n', test_names{t});
+dome_types  = {'ellipsoidal', 'hemispherical', 'isotensoid'};
+dome_labels = {'ellip', 'hemi', 'isoten'};
+
+for dt = 1:3
+    for t = 1:4
+        t7_total = t7_total + 1;
+        label = sprintf('%s [%s]', test_names{t}, dome_labels{dt});
+        try
+            switch dome_types{dt}
+                case 'ellipsoidal'
+                    dome_t = ellipsoidal_dome_profile(test_Req(t), test_r0(t), k_ell, 1000);
+                case 'hemispherical'
+                    dome_t = hemispherical_dome_profile(test_Req(t), test_r0(t), 1000);
+                case 'isotensoid'
+                    dome_t = isotensoid_dome_profile(test_Req(t), test_r0(t), 1000);
+            end
+            geo_t  = geodesic_single_circuit(dome_t, test_Req(t), test_r0(t), test_Lcyl(t), BW_eff);
+            alpha_t = asin((test_r0(t) + BW_eff/2) / test_Req(t));
+            pats_t = find_compatible_patterns(geo_t.delta_phi_circuit, alpha_t, ...
+                                               test_Req(t), BW_eff, test_Lcyl(t), d, coverage_range);
+            np = numel(pats_t);
+            if np > 0
+                fprintf('  %s: %2d pat (p=%d..%d), Δφ=%.4f rad\n', ...
+                        label, np, pats_t(1).p, pats_t(end).p, geo_t.delta_phi_circuit);
+            else
+                fprintf('  %s: 0 pat (coverage aralığında yok)\n', label);
+            end
+            t7_ok = t7_ok + 1;
+        catch ME
+            fprintf('  FAIL: %s → %s\n', label, ME.message);
+            t7_pass = false;
         end
-    catch ME
-        fprintf('  FAIL: %s → %s\n', test_names{t}, ME.message);
-        t7_pass = false;
     end
 end
 total_tests = total_tests + 1;
 if t7_pass
     total_pass = total_pass + 1;
-    fprintf('  PASS — 4/4 test senaryosu hatasız çalıştı\n\n');
+    fprintf('  PASS — %d/%d kombinasyon hatasız çalıştı\n\n', t7_ok, t7_total);
 else
-    fprintf('\n');
+    fprintf('  %d/%d başarılı\n\n', t7_ok, t7_total);
 end
 
 %% ================================================================
