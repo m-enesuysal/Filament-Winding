@@ -58,7 +58,10 @@ kaplama hesabı hepsi bu tabloya dayanır.
 | K-2b-02 | L_cyl düzeltme sınırsız, %1 varsayılan uyarı eşiği | İnce ayar |
 | K-2b-03 | Her katman farklı α kullanabilir | Sekans esnekliği |
 | K-2b-04 | Tablo varsayılan sıralama: p küçükten büyüğe | Çıktı formatı |
+<<<<<<< HEAD
 | K-2b-07 | T6 Diophantine koşulu bilgi raporu — strict koşul zorunlu değil, coverage-based arama esas (Yaklaşım A) | T6 CONDITIONAL PASS |
+=======
+>>>>>>> main
 
 ---
 
@@ -105,6 +108,7 @@ kaplama hesabı hepsi bu tabloya dayanır.
 Bir tam devrenin mandrel etrafındaki toplam açısal ilerleme Δφ_circuit,
 Phase-2a GeodesicSolver tarafından hesaplanır (Eq. 8.1 of phase2a_geodesic_math.md):
 
+<<<<<<< HEAD
 $$\Delta\phi_{circuit} = 4 \cdot \phi_{dome} + 2 \cdot \phi_{cyl} \tag{4.1}$$
 
 Bu ilerleme tam turlardan (2π katları) ve bir artık kısımdan oluşur:
@@ -114,6 +118,17 @@ $$\Delta\phi_{circuit} = 2\pi \cdot q_{full} + K \tag{4.2}$$
 burada:
 - $q_{full} = \lfloor \Delta\phi_{circuit} / (2\pi) \rfloor$ — tam tur sayısı
 - $K = \Delta\phi_{circuit} \mod 2\pi$ — artık açısal ilerleme, $K \in [0, 2\pi)$
+=======
+$$\\Delta\\phi_{circuit} = 4 \\cdot \\phi_{dome} + 2 \\cdot \\phi_{cyl} \\tag{4.1}$$
+
+Bu ilerleme tam turlardan (2π katları) ve bir artık kısımdan oluşur:
+
+$$\\Delta\\phi_{circuit} = 2\\pi \\cdot q_{full} + K \\tag{4.2}$$
+
+burada:
+- $q_{full} = \\lfloor \\Delta\\phi_{circuit} / (2\\pi) \\rfloor$ — tam tur sayısı
+- $K = \\Delta\\phi_{circuit} \\mod 2\\pi$ — artık açısal ilerleme, $K \\in [0, 2\\pi)$
+>>>>>>> main
 
 K, Koussios Bölüm 8'deki "pattern constant" ile birebir örtüşür (Eq. 8.11).
 
@@ -122,6 +137,7 @@ K, Koussios Bölüm 8'deki "pattern constant" ile birebir örtüşür (Eq. 8.11)
 Mandrel ekvatorunda $p$ adet eşit partisyon oluşturulur. Her partisyonun
 açısal genişliği $K$ olmalıdır. Dolayısıyla:
 
+<<<<<<< HEAD
 $$p \cdot K = 2\pi \cdot dk \tag{4.3}$$
 
 ve pattern kapama koşulu:
@@ -129,16 +145,32 @@ ve pattern kapama koşulu:
 $$\Delta\phi_{circuit} = \frac{2\pi q}{p} \tag{4.4}$$
 
 burada $q = q_{full} \cdot \text{(tam tur katkısı)} + dk \cdot \text{(artık katkı)}$.
+=======
+$$p \\cdot K = 2\\pi \\cdot dk \\tag{4.3}$$
+
+ve pattern kapama koşulu:
+
+$$\\Delta\\phi_{circuit} = \\frac{2\\pi q}{p} \\tag{4.4}$$
+
+burada $q = q_{full} \\cdot \\text{(tam tur katkısı)} + dk \\cdot \\text{(artık katkı)}$.
+>>>>>>> main
 Bu denklem, Phase-0 Karar-13'te tanımlanan temel uyum koşuludur.
 
 ### 4.3 q ve Δφ_circuit Doğrudan İlişkisi
 
 Denklem (4.4)'ü açarsak:
 
+<<<<<<< HEAD
 $$q = \frac{p \cdot \Delta\phi_{circuit}}{2\pi} \tag{4.5}$$
 
 q tamsayı olmalıdır. Geometriden gelen Δφ_circuit genellikle tam bir
 $2\pi q / p$ değerine denk gelmez — bu nedenle ya uyumlu p/q çifti aranır
+=======
+$$q = \\frac{p \\cdot \\Delta\\phi_{circuit}}{2\\pi} \\tag{4.5}$$
+
+q tamsayı olmalıdır. Geometriden gelen Δφ_circuit genellikle tam bir
+$2\\pi q / p$ değerine denk gelmez — bu nedenle ya uyumlu p/q çifti aranır
+>>>>>>> main
 ya da L_cyl düzeltmesi yapılır (Bölüm 7).
 
 ---
@@ -149,6 +181,7 @@ ya da L_cyl düzeltmesi yapılır (Bölüm 7).
 
 Ekvator çevresini d katman ile tamamen kaplamak için:
 
+<<<<<<< HEAD
 $$n \cdot b_{eq} = 2\pi R_{eq} \cdot d \tag{5.1}$$
 
 burada $b_{eq} = BW_{eff} / \cos\alpha_{eq}$ ekvator efektif genişliğidir.
@@ -156,6 +189,15 @@ burada $b_{eq} = BW_{eff} / \cos\alpha_{eq}$ ekvator efektif genişliğidir.
 Buradan:
 
 $$n = \left\lfloor \frac{2\pi R_{eq} \cdot d \cdot \cos\alpha_{eq}}{BW_{eff}} \right\rfloor \tag{5.2}$$
+=======
+$$n \\cdot b_{eq} = 2\\pi R_{eq} \\cdot d \\tag{5.1}$$
+
+burada $b_{eq} = BW_{eff} / \\cos\\alpha_{eq}$ ekvator efektif genişliğidir.
+
+Buradan:
+
+$$n = \\left\\lfloor \\frac{2\\pi R_{eq} \\cdot d \\cdot \\cos\\alpha_{eq}}{BW_{eff}} \\right\\rfloor \\tag{5.2}$$
+>>>>>>> main
 
 n tamsayıya yuvarlanır. Yuvarlama aşağı yapılırsa hafif boşluk (gap),
 yukarı yapılırsa hafif örtüşme (overlap) oluşur.
@@ -164,12 +206,21 @@ yukarı yapılırsa hafif örtüşme (overlap) oluşur.
 
 Pattern'ın kapaması için p, dk ve n arasında şu ilişki sağlanmalıdır:
 
+<<<<<<< HEAD
 $$\text{Leading:} \quad p \cdot dk - n \cdot d = +1 \tag{5.3a}$$
 
 $$\text{Lagging:} \quad p \cdot dk - n \cdot d = -1 \tag{5.3b}$$
 
 Bu, birinci dereceden Diophantine denklemidir. Çözüm koşulu:
 $\gcd(p, n \cdot d) = 1$ olmalıdır (aksi halde çözüm yoktur).
+=======
+$$\\text{Leading:} \\quad p \\cdot dk - n \\cdot d = +1 \\tag{5.3a}$$
+
+$$\\text{Lagging:} \\quad p \\cdot dk - n \\cdot d = -1 \\tag{5.3b}$$
+
+Bu, birinci dereceden Diophantine denklemidir. Çözüm koşulu:
+$\\gcd(p, n \\cdot d) = 1$ olmalıdır (aksi halde çözüm yoktur).
+>>>>>>> main
 
 ### 5.3 Arama Algoritması
 
@@ -215,6 +266,7 @@ Her p ∈ [p_min, p_max] için:
 **Adım 4 — K ve q hesabı:**
 
 Her geçerli (p, dk) için:
+<<<<<<< HEAD
 1. $K = 2\pi \cdot dk / p$ (Eq. 4.3)
 2. $\Delta\phi_{target} = 2\pi \cdot q / p$ — burada q, Eq. (4.5) ile belirlenir
 3. q tamsayı kontrolü: $|q - \text{round}(q)| < 10^{-6}$
@@ -222,13 +274,28 @@ Her geçerli (p, dk) için:
 **Adım 5 — gcd kontrolü (S-PAT-02):**
 
 $\gcd(p, q) = 1$ sağlanmalıdır. Aksi halde fiber $p/\gcd$ devreden
+=======
+1. $K = 2\\pi \\cdot dk / p$ (Eq. 4.3)
+2. $\\Delta\\phi_{target} = 2\\pi \\cdot q / p$ — burada q, Eq. (4.5) ile belirlenir
+3. q tamsayı kontrolü: $|q - \\text{round}(q)| < 10^{-6}$
+
+**Adım 5 — gcd kontrolü (S-PAT-02):**
+
+$\\gcd(p, q) = 1$ sağlanmalıdır. Aksi halde fiber $p/\\gcd$ devreden
+>>>>>>> main
 sonra tekrar başlangıç noktasına döner ve mandrel tam kaplanmaz.
 
 **Adım 6 — Coverage ve overlap hesabı:**
 
+<<<<<<< HEAD
 $$\text{Coverage} = \frac{n \cdot BW_{eff}}{2\pi R_{eq} \cdot d \cdot \cos\alpha_{eq}} \times 100\% \tag{5.4}$$
 
 $$\text{Overlap}_{eq} = n \cdot \frac{BW_{eff}}{\cos\alpha_{eq}} - 2\pi R_{eq} \cdot d \quad [\text{mm}] \tag{5.5}$$
+=======
+$$\\text{Coverage} = \\frac{n \\cdot BW_{eff}}{2\\pi R_{eq} \\cdot d \\cdot \\cos\\alpha_{eq}} \\times 100\\% \\tag{5.4}$$
+
+$$\\text{Overlap}_{eq} = n \\cdot \\frac{BW_{eff}}{\\cos\\alpha_{eq}} - 2\\pi R_{eq} \\cdot d \\quad [\\text{mm}] \\tag{5.5}$$
+>>>>>>> main
 
 ### 5.4 Desen Sıralama ve Atlama Düzeni (Skip-Index)
 
@@ -244,7 +311,11 @@ Bir tam desende p adet dome temas noktası (touchpoint) ekvator çevresinde
 eşit aralıklı dağılır. 1. devre 1 numaralı touchpoint'ten başlar ve 1+q
 numaralı touchpoint'e atlar. Genel olarak i. devrenin dome-1 touchpoint'i:
 
+<<<<<<< HEAD
 $$\text{TP}_i = [(i-1) \cdot q] \mod p + 1, \quad i = 1, 2, \ldots, p \tag{5.6}$$
+=======
+$$\\text{TP}_i = [(i-1) \\cdot q] \\mod p + 1, \\quad i = 1, 2, \\ldots, p \\tag{5.6}$$
+>>>>>>> main
 
 gcd(p,q) = 1 koşulu sağlandığında (S-PAT-02), bu formül p devre sonunda tüm
 touchpoint'leri tam olarak bir kez ziyaret eder — yani permütasyon tamdır.
@@ -324,7 +395,11 @@ arama modumuz.
 Geometriden gelen Δφ_circuit genellikle tam bir 2πq/p'ye denk gelmez.
 Silindirik bölge uzunluğu L_cyl, φ_cyl'yi doğrusal olarak kontrol eder:
 
+<<<<<<< HEAD
 $$\phi_{cyl} = \frac{L_{cyl} \cdot \tan\alpha_{cyl}}{R_{eq}} \tag{7.1}$$
+=======
+$$\\phi_{cyl} = \\frac{L_{cyl} \\cdot \\tan\\alpha_{cyl}}{R_{eq}} \\tag{7.1}$$
+>>>>>>> main
 
 dolayısıyla L_cyl'deki küçük bir değişiklik Δφ_circuit'i doğrudan etkiler.
 
@@ -332,17 +407,29 @@ dolayısıyla L_cyl'deki küçük bir değişiklik Δφ_circuit'i doğrudan etki
 
 Hedef Δφ_circuit = 2πq/p olması için gerekli silindir düzeltmesi:
 
+<<<<<<< HEAD
 $$\Delta L_{cyl} = \frac{(2\pi q / p - \Delta\phi_{circuit}) \cdot R_{eq}}{2 \cdot \tan\alpha_{cyl}} \tag{7.2}$$
+=======
+$$\\Delta L_{cyl} = \\frac{(2\\pi q / p - \\Delta\\phi_{circuit}) \\cdot R_{eq}}{2 \\cdot \\tan\\alpha_{cyl}} \\tag{7.2}$$
+>>>>>>> main
 
 Çarpan 2: bir tam devrede silindir iki kez geçilir (forward + return).
 
 Düzeltilmiş silindir uzunluğu:
 
+<<<<<<< HEAD
 $$L_{cyl}^{adj} = L_{cyl} + \Delta L_{cyl} \tag{7.3}$$
 
 ### 7.3 Uyarı Eşiği (K-2b-02)
 
 $$\text{Varsayılan eşik:} \quad |\Delta L_{cyl}| < 0.01 \times L_{cyl} \tag{7.4}$$
+=======
+$$L_{cyl}^{adj} = L_{cyl} + \\Delta L_{cyl} \\tag{7.3}$$
+
+### 7.3 Uyarı Eşiği (K-2b-02)
+
+$$\\text{Varsayılan eşik:} \\quad |\\Delta L_{cyl}| < 0.01 \\times L_{cyl} \\tag{7.4}$$
+>>>>>>> main
 
 - Eşik altında: düzeltme sessizce uygulanır
 - Eşik üstünde: `LCYL_ADJUSTMENT_WARNING` uyarısı — düzeltme miktarı ve
@@ -356,7 +443,11 @@ sunar ama kararı engellemez.
 
 ### 7.4 Doğrulama
 
+<<<<<<< HEAD
 **Geometrik ön kontrol:** $L_{cyl} + \Delta L_{cyl} < 0$ durumunda düzeltme
+=======
+**Geometrik ön kontrol:** $L_{cyl} + \\Delta L_{cyl} < 0$ durumunda düzeltme
+>>>>>>> main
 geometrik olarak imkansızdır — silindir uzunluğu negatif olamaz. Bu durumda
 fiber dome'dan çıkar çıkmaz karşı dome'a girer ve silindirik bölge ortadan
 kalkar. Yazılım `std::invalid_argument` hatası fırlatır; bu pattern o
@@ -374,22 +465,36 @@ bağımsız olduğundan bu doğrulama hızlıdır (sadece φ_cyl yeniden hesapla
 
 Her sarım katmanı tamamlandığında mandrel efektif yarıçapı artar:
 
+<<<<<<< HEAD
 $$R_{eff}^{(i)} = R_{eq} + (i-1) \cdot BT_{eff} \tag{8.1}$$
+=======
+$$R_{eff}^{(i)} = R_{eq} + (i-1) \\cdot BT_{eff} \\tag{8.1}$$
+>>>>>>> main
 
 burada $i$ katman numarası (1'den başlar), $BT_{eff}$ efektif katman kalınlığı.
 
 Efektif polar açıklık yarıçapı da güncellenir:
 
+<<<<<<< HEAD
 $$R_E^{(i)} = r_0 + \frac{BW_{eff}}{2} + (i-1) \cdot BT_{eff} \tag{8.2}$$
+=======
+$$R_E^{(i)} = r_0 + \\frac{BW_{eff}}{2} + (i-1) \\cdot BT_{eff} \\tag{8.2}$$
+>>>>>>> main
 
 **Gerginliğe bağlı kalınlık sıkıştırma (compaction factor):**
 
 Islak sarımda (wet winding) fiber gerginliği, reçine sıkışması nedeniyle
 katmanın efektif kalınlığını nominal BT değerinin altına düşürür:
 
+<<<<<<< HEAD
 $$BT_{eff} = BT \cdot C_f \tag{8.2a}$$
 
 burada $C_f$ sıkıştırma katsayısı (compaction factor), $0 < C_f \leq 1$.
+=======
+$$BT_{eff} = BT \\cdot C_f \\tag{8.2a}$$
+
+burada $C_f$ sıkıştırma katsayısı (compaction factor), $0 < C_f \\leq 1$.
+>>>>>>> main
 
 | Proses tipi | Tipik $C_f$ aralığı | Açıklama |
 |-------------|---------------------|----------|
@@ -399,7 +504,11 @@ burada $C_f$ sıkıştırma katsayısı (compaction factor), $0 < C_f \leq 1$.
 
 **Phase-2b implementasyonu:** $C_f$ kullanıcı girdisi olarak `WindingParams`
 struct'ına eklenir (varsayılan: 1.0, yani sıkıştırma yok). Denklem (8.1) ve
+<<<<<<< HEAD
 (8.2)'deki BT yerine $BT_{eff} = BT \cdot C_f$ kullanılır.
+=======
+(8.2)'deki BT yerine $BT_{eff} = BT \\cdot C_f$ kullanılır.
+>>>>>>> main
 
 **Kapsam sınırı:** Gerginlik-kalınlık ilişkisinin analitik modeli (fiber
 tension → C_f dönüşümü) bu fazın kapsamı dışındadır. Kullanıcı, proses
@@ -459,6 +568,7 @@ tercihi sunulur.
 
 Butt-joint (varsayılan):
 
+<<<<<<< HEAD
 $$n_{hoop} = \left\lceil \frac{L_{cyl}}{BW_{eff}} \right\rceil \tag{8.3a}$$
 
 Gap modunda:
@@ -468,12 +578,27 @@ $$n_{hoop}^{gap} = \left\lceil \frac{L_{cyl}}{BW_{eff} + gap} \right\rceil \tag{
 Overlap modunda:
 
 $$n_{hoop}^{ovlp} = \left\lceil \frac{L_{cyl}}{BW_{eff} - overlap} \right\rceil \tag{8.3c}$$
+=======
+$$n_{hoop} = \\left\\lceil \\frac{L_{cyl}}{BW_{eff}} \\right\\rceil \\tag{8.3a}$$
+
+Gap modunda:
+
+$$n_{hoop}^{gap} = \\left\\lceil \\frac{L_{cyl}}{BW_{eff} + gap} \\right\\rceil \\tag{8.3b}$$
+
+Overlap modunda:
+
+$$n_{hoop}^{ovlp} = \\left\\lceil \\frac{L_{cyl}}{BW_{eff} - overlap} \\right\\rceil \\tag{8.3c}$$
+>>>>>>> main
 
 burada $overlap < BW_{eff}$ koşulu zorunludur (overlap ≥ BW_eff → sonsuz devre).
 
 **Hoop coverage hesabı:**
 
+<<<<<<< HEAD
 $$\text{Coverage}_{hoop} = \frac{n_{hoop} \cdot BW_{eff}}{L_{cyl}} \times 100\% \tag{8.4}$$
+=======
+$$\\text{Coverage}_{hoop} = \\frac{n_{hoop} \\cdot BW_{eff}}{L_{cyl}} \\times 100\\% \\tag{8.4}$$
+>>>>>>> main
 
 **Hoop katmanı pattern tablosunda ayrı satır:**
 - p = n_hoop, q = 0, dk = 1, n = n_hoop
@@ -563,23 +688,39 @@ leading (+) önce gösterilir.
 
 ### 11.1 Pattern Kapama Toleransı
 
+<<<<<<< HEAD
 $$|p \cdot \Delta\phi_{circuit}^{adj} - 2\pi q| < 10^{-6} \; \text{rad} \tag{11.1}$$
+=======
+$$|p \\cdot \\Delta\\phi_{circuit}^{adj} - 2\\pi q| < 10^{-6} \\; \\text{rad} \\tag{11.1}$$
+>>>>>>> main
 
 p devre toplam açısal ilerleme, hedef 2πq'ya bu toleransta eşit olmalıdır.
 
 ### 11.2 Coverage Doğrulama
 
+<<<<<<< HEAD
 $$\left| \frac{n \cdot b_{eq}}{2\pi R_{eq} \cdot d} - \frac{\text{Coverage}_{reported}}{100} \right| < 10^{-4} \tag{11.2}$$
 
 ### 11.3 Diophantine Doğrulama
 
 $$|p \cdot dk - n \cdot d| = 1 \tag{11.3}$$
+=======
+$$\\left| \\frac{n \\cdot b_{eq}}{2\\pi R_{eq} \\cdot d} - \\frac{\\text{Coverage}_{reported}}{100} \\right| < 10^{-4} \\tag{11.2}$$
+
+### 11.3 Diophantine Doğrulama
+
+$$|p \\cdot dk - n \\cdot d| = 1 \\tag{11.3}$$
+>>>>>>> main
 
 Tam tamsayı kontrolü — kayan nokta hatası yok (tamsayı aritmetiği).
 
 ### 11.4 gcd Doğrulama
 
+<<<<<<< HEAD
 $$\gcd(p, q) = 1 \tag{11.4}$$
+=======
+$$\\gcd(p, q) = 1 \\tag{11.4}$$
+>>>>>>> main
 
 Öklid algoritması ile kesin kontrol.
 
@@ -589,7 +730,11 @@ Hesaplanan desenin makine kontrolcüsü tarafından fiziksel olarak uygulanabilm
 için, her devrenin açısal ilerleme hatasının spindle rotasyon hassasiyeti
 dahilinde kalması gerekir:
 
+<<<<<<< HEAD
 $$|\Delta\phi_{circuit}^{target} - \Delta\phi_{circuit}^{actual}| \leq 0.5° = 8.727 \times 10^{-3} \; \text{rad} \tag{11.5}$$
+=======
+$$|\\Delta\\phi_{circuit}^{target} - \\Delta\\phi_{circuit}^{actual}| \\leq 0.5° = 8.727 \\times 10^{-3} \\; \\text{rad} \\tag{11.5}$$
+>>>>>>> main
 
 Bu tolerans, makine kontrolcüsünün (Phase-5) numerik hassasiyeti için bir
 emniyet sınırıdır. L_cyl düzeltmesi sonrası bu koşul otomatik olarak
