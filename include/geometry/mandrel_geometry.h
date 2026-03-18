@@ -57,6 +57,7 @@ public:
     double totalLength() const;
     DomeType domeType() const;
     const ProfileMetadata& domeMetadata() const;
+    const MeridianLookupTable& domeTable() const { return dome_table_; }
 
 private:
     MeridianLookupTable dome_table_;

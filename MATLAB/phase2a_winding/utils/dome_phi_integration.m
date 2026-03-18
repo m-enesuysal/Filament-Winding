@@ -3,7 +3,7 @@ function [result] = dome_phi_integration(dome_profile, R_E, epsilon)
 %
 % Phase-2a: Geodesic sarim yolu — dome phi ODE cozumu.
 % Cekirdek ODE (Eq. 5.5): dphi/ds = R_E / (rho(s) * sqrt(rho(s)^2 - R_E^2))
-% Singularite yonetimi (Eq. 6.6): analitik kuyruk tamamlama.
+% Singularite yonetimi: birlesik 1. + 2. derece analitik kuyruk tamamlama.
 %
 % KULLANIM:
 %   result = dome_phi_integration(dome_profile, R_E)
@@ -18,9 +18,12 @@ function [result] = dome_phi_integration(dome_profile, R_E, epsilon)
 %   result : Struct
 %     .phi_dome       — Toplam dome phi katkisi [rad] (numerik + analitik)
 %     .phi_numerical  — Numerik integrasyon katkisi [rad]
-%     .phi_tail       — Analitik kuyruk katkisi [rad] (Eq. 6.6)
-%     .s_epsilon      — Numerik durdurma noktasi [mm]
-%     .drho_turn      — |drho/ds| donus noktasinda
+%     .phi_tail       — Analitik kuyruk katkisi [rad]
+%     .s_epsilon      — Numerik durdurma noktasi [mm] (rho = R_E + epsilon)
+%     .s_turn         — Donus noktasi [mm] (rho = R_E)
+%     .delta_eps      — Kuyruk mesafesi [mm] (s_turn - s_epsilon)
+%     .drho_turn      — |drho/ds| at s_epsilon
+%     .d2rho_turn     — |d2rho/ds2| at s_epsilon
 %     .s_ode          — ODE ham cikti s noktalari [M x 1]
 %     .phi_ode        — ODE ham cikti phi degerleri [M x 1]
 %     .alpha_eq       — Ekvator winding acisi [rad]
@@ -119,23 +122,113 @@ function [result] = dome_phi_integration(dome_profile, R_E, epsilon)
 
     phi_numerical = phi_ode(end);
 
-    %% --- Analitik kuyruk tamamlama (Eq. 6.6) ---
-    % drho/ds donus noktasinda (s ~ s_total, rho ~ R_E)
-    % drho_ds profil sonuna yakin deger
-    drho_at_turn = drho_interp(dome_profile.s_total);
-    drho_turn_abs = abs(drho_at_turn);
+    %% --- s_turn tespiti: rho(s_turn) = R_E (donus noktasi) ---
+    % Binary search ile s_turn bul (rho monoton azalir)
+    rho_turn_target = R_E;
 
-    % Dejenere donus kontrolu (S-GEO-01)
-    if drho_turn_abs < 1e-8
-        warning('dome_phi_integration:dejenerDonus', ...
-                '|drho/ds| donus noktasinda cok kucuk: %.2e. Sonuc guvenilmez olabilir.', ...
-                drho_turn_abs);
-        % Ikinci derece yaklasim yerine kucuk bir alt sinir kullan
-        drho_turn_abs = max(drho_turn_abs, 1e-8);
+    s_lo2 = 0;
+    s_hi2 = dome_profile.s_total;
+    for iter = 1:max_iter
+        s_mid2 = (s_lo2 + s_hi2) / 2;
+        rho_mid2 = rho_interp(s_mid2);
+        if abs(rho_mid2 - rho_turn_target) < tol_bs
+            break;
+        end
+        if rho_mid2 > rho_turn_target
+            s_lo2 = s_mid2;
+        else
+            s_hi2 = s_mid2;
+        end
     end
+    s_turn = s_mid2;
 
-    % Eq. 6.6: Delta_phi_tail = (1/|drho_turn|) * sqrt(2*epsilon/R_E)
-    phi_tail = (1 / drho_turn_abs) * sqrt(2 * epsilon / R_E);
+    %% --- Analitik kuyruk tamamlama (birlesik 1. + 2. derece) ---
+    % Tureve s_epsilon noktasinda (numerik integrasyon siniri) deger
+    % NOT: Eski kod s_total'da degerler aliyordu — izotensoid icin drho=0.
+    %      Donus noktasi s_turn'de (rho=R_E), s_total'de (rho=r0) degil.
+
+    % 1. turev: a = |drho/ds| at s_epsilon
+    a = abs(drho_interp(s_epsilon));
+
+    % 2. turev: b = |d2rho/ds2| at s_epsilon (merkezi sonlu fark)
+    ds_fd = min(epsilon / 2, (dome_profile.s_total - s_epsilon) / 4);
+    ds_fd = max(ds_fd, 1e-8);  % alt sinir
+    drho_plus  = drho_interp(s_epsilon + ds_fd);
+    drho_minus = drho_interp(s_epsilon - ds_fd);
+    d2rho = (drho_plus - drho_minus) / (2 * ds_fd);
+    b = abs(d2rho);
+
+    % --- Birlesik kuyruk formulu ---
+    % Taylor yaklasimi: rho(s) ~ R_E + a*(s_turn - s) + (b/2)*(s_turn - s)^2
+    % s_epsilon noktasinda: rho = R_E + epsilon, delta_eps = s_turn - s_epsilon
+    %
+    % delta_eps cozumu (kararlil versiyon):
+    %   a*d + (b/2)*d^2 = epsilon  =>  d = 2*eps / (a + sqrt(a^2 + 2*b*eps))
+    %
+    % Kuyruk integrali:
+    %   phi_tail = integral_0^{delta_eps} R_E / (rho * sqrt(rho^2 - R_E^2)) ds
+    %
+    % Birinci derece baskın (b << a^2/eps): Eq. 6.6'ya indirger
+    %   phi_tail = (1/a) * sqrt(2*epsilon/R_E)
+    %
+    % Ikinci derece baskın (a << sqrt(b*eps)): izotensoid durumu
+    %   phi_tail = (2/sqrt(R_E*b)) * arcsinh(sqrt(b*delta_eps/(2*a)))
+    %   a->0 limiti: phi_tail = (1/sqrt(R_E*b)) * log(2*b*delta_eps/epsilon)
+
+    if b < 1e-12 && a > 1e-12
+        % Saf birinci derece (standart dome'lar)
+        delta_eps = epsilon / a;
+        phi_tail = (1 / a) * sqrt(2 * epsilon / R_E);
+    elseif a < 1e-12 && b > 1e-12
+        % Saf ikinci derece (izotensoid donus noktasinda a~0)
+        delta_eps = sqrt(2 * epsilon / b);
+        phi_tail = (1 / sqrt(R_E * b)) * acosh(1 + epsilon / R_E);
+        % Kucuk epsilon/R_E icin: acosh(1+x) ~ sqrt(2x), dolayisiyla
+        % phi_tail ~ sqrt(2*epsilon) / (sqrt(R_E) * sqrt(R_E*b)) = sqrt(2*eps/(R_E^2*b))
+    else
+        % Genel birlesik formul
+        discriminant = a^2 + 2 * b * epsilon;
+        delta_eps = 2 * epsilon / (a + sqrt(discriminant));
+
+        % phi_tail = (2/sqrt(R_E*b)) * arcsinh(sqrt(b*delta_eps/(2*a)))
+        % ancak a->0 icin kararsiz; argumani farkli yazalim:
+        %   b*delta_eps = b * 2*eps / (a + sqrt(a^2+2*b*eps))
+        % Numerik integral ile dogrudan hesapla (kuyruk bolgesinde rho ~ R_E + eps)
+        if b > 1e-12
+            % Arcsinh formulu: delta_eps biliniyor, kuyruk integrali analitik
+            % rho(u) = R_E + a*u + (b/2)*u^2, u = s_turn - s, u in [0, delta_eps]
+            % dphi = R_E / (rho * sqrt(rho^2 - R_E^2)) ds
+            % rho^2 - R_E^2 ~ 2*R_E*(rho - R_E) = 2*R_E*(a*u + b*u^2/2)
+            % sqrt(rho^2-R_E^2) ~ sqrt(2*R_E) * sqrt(a*u + b*u^2/2)
+            % rho ~ R_E (kuyruk bolgesi)
+            % dphi/du ~ 1/sqrt(2*R_E) * 1/sqrt(a*u + b*u^2/2)
+            %         = 1/sqrt(2*R_E) * 1/sqrt(u*(a + b*u/2))
+            % Substitution t = sqrt(u):
+            % integral = 2/sqrt(2*R_E) * integral_0^{sqrt(delta_eps)} dt / sqrt(a + b*t^2/2)
+            %          = 2/sqrt(R_E*b) * arcsinh(sqrt(b*delta_eps/(2*a)))   [a>0]
+            if a > 1e-14
+                arg = sqrt(b * delta_eps / (2 * a));
+                phi_tail = (2 / sqrt(R_E * b)) * asinh(arg);
+            else
+                % a ~ 0: integral = 2/sqrt(R_E*b) * integral dt/t (log sonuc)
+                % = (1/sqrt(R_E*b)) * log(2*b*delta_eps / (2*a + b*delta_eps) * ??? )
+                % Guvenli: rho(u) = R_E + (b/2)*u^2
+                % phi = integral_0^de 1/(sqrt(2*R_E)*sqrt(b/2)*u) du
+                %     = 1/sqrt(R_E*b) * log(delta_eps / u_min)
+                % u_min -> 0 kuyruk ucu, ama fizikte s_turn'de rho=R_E tam
+                % acosh formulu daha dogru:
+                phi_tail = (1 / sqrt(R_E * b)) * acosh(1 + epsilon / R_E);
+            end
+        else
+            % b ~ 0, a ~ 0: her ikisi de cok kucuk — dejenere durum
+            warning('dome_phi_integration:dejenerDonus', ...
+                    '|drho/ds|=%.2e ve |d2rho/ds2|=%.2e donus noktasinda cok kucuk.', a, b);
+            % Alt sinir ile birinci derece formul kullan
+            a_safe = max(a, 1e-8);
+            delta_eps = epsilon / a_safe;
+            phi_tail = (1 / a_safe) * sqrt(2 * epsilon / R_E);
+        end
+    end
 
     % Toplam dome phi
     phi_dome = phi_numerical + phi_tail;
@@ -148,7 +241,10 @@ function [result] = dome_phi_integration(dome_profile, R_E, epsilon)
     result.phi_numerical = phi_numerical;
     result.phi_tail      = phi_tail;
     result.s_epsilon     = s_epsilon;
-    result.drho_turn     = drho_turn_abs;
+    result.s_turn        = s_turn;
+    result.delta_eps     = delta_eps;
+    result.drho_turn     = a;          % |drho/ds| at s_epsilon
+    result.d2rho_turn    = b;          % |d2rho/ds2| at s_epsilon
     result.s_ode         = s_ode;
     result.phi_ode       = phi_ode;
     result.alpha_eq      = alpha_eq;

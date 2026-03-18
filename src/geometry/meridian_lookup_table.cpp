@@ -76,6 +76,8 @@ void MeridianLookupTable::build(
     spline_dx_ds_    = computeNaturalCubicSpline(dx_ds_);
     spline_kappa_m_  = computeNaturalCubicSpline(kappa_m_);
 
+    // Ters sorgu: forward spline + bisection kullanilir (ek veri yapisi gerekmez)
+
     valid_ = true;
 }
 
@@ -241,6 +243,91 @@ double MeridianLookupTable::evalPoly(
     const SplineCoeffs& coeff, std::size_t i, double t)
 {
     return coeff.a[i] + t * (coeff.b[i] + t * (coeff.c[i] + t * coeff.d[i]));
+}
+
+// ---------------------------------------------------------------------------
+// inverseLookup — rho'dan s ve x_local ters sorgulama
+// ---------------------------------------------------------------------------
+// Yontem: Forward spline uzerinde bisection.
+//   1. rho_[] monoton azalir -> binary search ile baslangic araligi [s_lo, s_hi] bul
+//   2. Bisection: rho_spline(s_mid) == rho_target olana kadar iterasyon
+//   3. s bulunduktan sonra x_spline(s) ile x_local hesapla
+// Forward spline hassasiyetini (Karar-11 Katman 2) korur.
+// ---------------------------------------------------------------------------
+std::optional<InversePoint> MeridianLookupTable::inverseLookup(double rho) const
+{
+    if (!valid_ || s_.size() < 2) {
+        return std::nullopt;
+    }
+
+    const double rho_min = rho_.back();   // r0 (en kucuk rho, s = s_total)
+    const double rho_max = rho_.front();  // R_eq (en buyuk rho, s = 0)
+
+    // Aralik kontrolu
+    constexpr double eps = 1e-10;
+    if (rho < rho_min - eps || rho > rho_max + eps) {
+        return std::nullopt;
+    }
+
+    // Sinir degerlere sabitle
+    if (rho > rho_max) rho = rho_max;
+    if (rho < rho_min) rho = rho_min;
+
+    // --- Adim 1: Binary search ile baslangic araligi bul ---
+    // rho_[] monoton azalir: rho_[i] >= rho > rho_[i+1]
+    // rho_target >= rho_[i+1] ve rho_target <= rho_[i] olan i'yi bul
+    std::size_t i_lo = 0;
+    std::size_t i_hi = s_.size() - 1;
+
+    // rho monoton azalir -> ters binary search
+    while (i_hi - i_lo > 1) {
+        const auto i_mid = (i_lo + i_hi) / 2;
+        if (rho_[i_mid] > rho) {
+            i_lo = i_mid;
+        } else {
+            i_hi = i_mid;
+        }
+    }
+
+    // Aralik: s in [s_[i_lo], s_[i_hi]], rho(s_[i_lo]) >= rho >= rho(s_[i_hi])
+    double s_lo = s_[i_lo];
+    double s_hi = s_[i_hi];
+
+    // --- Adim 2: Bisection (forward rho spline uzerinde) ---
+    constexpr double tol = 1e-12;  // s hassasiyeti
+    constexpr int max_iter = 80;   // 2^-80 * s_total < 1e-20
+
+    for (int iter = 0; iter < max_iter; ++iter) {
+        const double s_mid = 0.5 * (s_lo + s_hi);
+
+        if (s_hi - s_lo < tol) {
+            break;
+        }
+
+        // Forward spline ile rho(s_mid) hesapla
+        const auto seg = findSegment(s_mid);
+        const double t = s_mid - s_[seg];
+        const double rho_mid = evalPoly(spline_rho_, seg, t);
+
+        if (rho_mid > rho) {
+            // rho hala buyuk, s'yi artir (rho azalir)
+            s_lo = s_mid;
+        } else {
+            s_hi = s_mid;
+        }
+    }
+
+    const double s_result = 0.5 * (s_lo + s_hi);
+
+    // --- Adim 3: x_local(s) hesapla ---
+    const auto seg = findSegment(s_result);
+    const double t = s_result - s_[seg];
+
+    InversePoint pt;
+    pt.s       = s_result;
+    pt.x_local = evalPoly(spline_x_, seg, t);
+
+    return pt;
 }
 
 // ---------------------------------------------------------------------------

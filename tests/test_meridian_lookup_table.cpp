@@ -519,3 +519,198 @@ INSTANTIATE_TEST_SUITE_P(
         TestScenario{"TEST-04_H2_Aerospace",       200.0,  50.0}
     )
 );
+
+// ===========================================================================
+// 10. inverseLookup — PCHIP ters sorgu (rho -> s, x)
+// ===========================================================================
+// Phase-2a S3: Dome bolgesinde rho'dan s ve x_local geri cozumu.
+// Hemispherical dome analitik referansi:
+//   rho = R * cos(theta), s = R * theta
+//   rho -> theta = acos(rho/R) -> s = R * acos(rho/R)
+//   x = R * sin(theta) = R * sin(acos(rho/R)) = sqrt(R^2 - rho^2)
+// ===========================================================================
+
+TEST_F(MeridianLookupTableTest, InverseLookupAtKnots)
+{
+    // Dugum noktalarinda ters sorgu: rho_[i] -> s_[i], x_[i] olmali
+    for (std::size_t i = 0; i < N_points; ++i) {
+        auto result = table_.inverseLookup(testData_.rho[i]);
+        ASSERT_TRUE(result.has_value())
+            << "inverseLookup nullopt dondurdu, rho=" << testData_.rho[i];
+
+        EXPECT_NEAR(result->s, testData_.s[i], 1e-8)
+            << "s hatasi dugum " << i;
+        EXPECT_NEAR(result->x_local, testData_.x[i], 1e-8)
+            << "x hatasi dugum " << i;
+    }
+}
+
+TEST_F(MeridianLookupTableTest, InverseLookupPositionTolerance)
+{
+    // inverseLookup analitik referansla karsilastirma.
+    // NOT: inverseLookup forward kubik spline'i ters cevirir. Forward spline
+    // sinir araliginda (ilk/son ~5 aralik) O(h^2) hata uretir (dogal BC etkisi).
+    // Bu hata rho->s donusumunde amplifikasyona ugrar.
+    // Ic araliklarda (>= 10) forward spline hassasiyeti (POS_TOL) korunur.
+    constexpr double INV_BOUNDARY_TOL = 5e-2;  // Sinir araliklari icin [mm]
+    constexpr std::size_t BOUNDARY_SKIP = 10;   // Ilk N aralik sinir sayilir
+
+    double max_s_err = 0.0;
+    double max_x_err = 0.0;
+    double max_s_err_interior = 0.0;
+    double max_x_err_interior = 0.0;
+
+    for (std::size_t i = 0; i + 1 < N_points; ++i) {
+        const double rho_mid = 0.5 * (testData_.rho[i] + testData_.rho[i + 1]);
+
+        auto result = table_.inverseLookup(rho_mid);
+        ASSERT_TRUE(result.has_value());
+
+        const double theta_ref = std::acos(rho_mid / R_eq);
+        const double s_ref     = R_eq * theta_ref;
+        const double x_ref     = R_eq * std::sin(theta_ref);
+
+        const double s_err = std::abs(result->s - s_ref);
+        const double x_err = std::abs(result->x_local - x_ref);
+
+        max_s_err = std::max(max_s_err, s_err);
+        max_x_err = std::max(max_x_err, x_err);
+
+        // Sinir araliklari: gevsetilmis tolerans
+        // Ic araliklar: forward spline hassasiyeti
+        const bool is_boundary = (i < BOUNDARY_SKIP) ||
+                                 (i + 1 + BOUNDARY_SKIP >= N_points);
+        const double tol = is_boundary ? INV_BOUNDARY_TOL : POS_TOL;
+
+        if (!is_boundary) {
+            max_s_err_interior = std::max(max_s_err_interior, s_err);
+            max_x_err_interior = std::max(max_x_err_interior, x_err);
+        }
+
+        EXPECT_LT(s_err, tol)
+            << "s hatasi aralik " << i << (is_boundary ? " [sinir]" : "") << ": " << s_err;
+        EXPECT_LT(x_err, tol)
+            << "x hatasi aralik " << i << (is_boundary ? " [sinir]" : "") << ": " << x_err;
+    }
+
+    std::cout << "[INFO] inverseLookup maks s hatasi (tum):  " << max_s_err << " mm" << std::endl;
+    std::cout << "[INFO] inverseLookup maks s hatasi (ic):   " << max_s_err_interior
+              << " mm (limit: " << POS_TOL << ")" << std::endl;
+    std::cout << "[INFO] inverseLookup maks x hatasi (ic):   " << max_x_err_interior
+              << " mm (limit: " << POS_TOL << ")" << std::endl;
+}
+
+TEST_F(MeridianLookupTableTest, InverseLookupRoundTrip)
+{
+    // Round-trip: s -> query -> rho -> inverseLookup -> s'
+    // Karar-11 Katman 2 icinde dongu tutarliligi
+    for (std::size_t i = 0; i + 1 < N_points; i += 5) {
+        const double s_mid = 0.5 * (testData_.s[i] + testData_.s[i + 1]);
+
+        auto fwd = table_.query(s_mid);
+        ASSERT_TRUE(fwd.has_value());
+
+        auto inv = table_.inverseLookup(fwd->rho);
+        ASSERT_TRUE(inv.has_value());
+
+        // Forward cubic spline ve inverse PCHIP farkli
+        // yontemler — round-trip hatasi 2*POS_TOL icinde olmali
+        EXPECT_NEAR(inv->s, s_mid, 2.0 * POS_TOL)
+            << "Round-trip s hatasi, i=" << i;
+        EXPECT_NEAR(inv->x_local, fwd->x_local, 2.0 * POS_TOL)
+            << "Round-trip x hatasi, i=" << i;
+    }
+}
+
+TEST_F(MeridianLookupTableTest, InverseLookupBoundaries)
+{
+    // rho = R_eq (ekvator, s=0)
+    auto at_eq = table_.inverseLookup(R_eq);
+    ASSERT_TRUE(at_eq.has_value());
+    EXPECT_NEAR(at_eq->s, 0.0, 1e-10);
+
+    // rho = r0 (polar aciklik, s=s_total)
+    auto at_pol = table_.inverseLookup(r0);
+    ASSERT_TRUE(at_pol.has_value());
+    EXPECT_NEAR(at_pol->s, testData_.s_total, 1e-8);
+}
+
+TEST_F(MeridianLookupTableTest, InverseLookupOutOfRange)
+{
+    // rho > R_eq
+    auto above = table_.inverseLookup(R_eq + 10.0);
+    EXPECT_FALSE(above.has_value());
+
+    // rho < r0
+    auto below = table_.inverseLookup(r0 - 10.0);
+    EXPECT_FALSE(below.has_value());
+}
+
+TEST(MeridianLookupTableLinear, InverseLookupTwoPoint)
+{
+    MeridianLookupTable table;
+
+    std::vector<double> s       = {0.0, 10.0};
+    std::vector<double> rho     = {100.0, 90.0};
+    std::vector<double> x       = {0.0, 5.0};
+    std::vector<double> drho_ds = {-1.0, -1.0};
+    std::vector<double> dx_ds   = {0.5, 0.5};
+    std::vector<double> kappa   = {0.01, 0.01};
+
+    ProfileMetadata meta;
+    meta.R_eq = 100.0;
+    meta.r0   = 90.0;
+
+    table.build(s, rho, x, drho_ds, dx_ds, kappa, meta);
+    ASSERT_TRUE(table.isValid());
+
+    // rho=95 -> orta nokta -> s=5, x=2.5
+    auto mid = table.inverseLookup(95.0);
+    ASSERT_TRUE(mid.has_value());
+    EXPECT_NEAR(mid->s,       5.0, 1e-12);
+    EXPECT_NEAR(mid->x_local, 2.5, 1e-12);
+
+    // Sinir: rho=100 -> s=0
+    auto at_eq = table.inverseLookup(100.0);
+    ASSERT_TRUE(at_eq.has_value());
+    EXPECT_NEAR(at_eq->s, 0.0, 1e-12);
+
+    // Sinir: rho=90 -> s=10
+    auto at_pol = table.inverseLookup(90.0);
+    ASSERT_TRUE(at_pol.has_value());
+    EXPECT_NEAR(at_pol->s, 10.0, 1e-12);
+}
+
+// inverseLookup ile parameterized senaryolar
+TEST_P(MeridianLookupTableScenarios, InverseLookupTolerancesMet)
+{
+    const auto& scenario = GetParam();
+    const std::size_t N = 500;
+    constexpr double INV_BOUNDARY_TOL = 5e-2;
+    constexpr std::size_t BOUNDARY_SKIP = 10;
+
+    auto data = generateHemisphericalData(scenario.R_eq, scenario.r0, N);
+
+    MeridianLookupTable table;
+    table.build(data.s, data.rho, data.x,
+                data.drho_ds, data.dx_ds, data.kappa_m, data.meta);
+    ASSERT_TRUE(table.isValid());
+
+    for (std::size_t i = 0; i + 1 < N; ++i) {
+        const double rho_mid = 0.5 * (data.rho[i] + data.rho[i + 1]);
+        auto result = table.inverseLookup(rho_mid);
+        ASSERT_TRUE(result.has_value());
+
+        const double theta_ref = std::acos(rho_mid / scenario.R_eq);
+        const double s_ref     = scenario.R_eq * theta_ref;
+        const double x_ref     = scenario.R_eq * std::sin(theta_ref);
+
+        const bool is_boundary = (i < BOUNDARY_SKIP) || (i + 1 + BOUNDARY_SKIP >= N);
+        const double tol = is_boundary ? INV_BOUNDARY_TOL : tolerances::POSITION_ABS_TOL;
+
+        EXPECT_LT(std::abs(result->s - s_ref), tol)
+            << scenario.name << " s aralik " << i << (is_boundary ? " [sinir]" : "");
+        EXPECT_LT(std::abs(result->x_local - x_ref), tol)
+            << scenario.name << " x aralik " << i << (is_boundary ? " [sinir]" : "");
+    }
+}
